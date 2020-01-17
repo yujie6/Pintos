@@ -1,11 +1,15 @@
 # Pintos
-Labs for undergraduate OS class (600.318) at Johns Hopkins. [Pintos](http://pintos-os.org) 
-is a teaching operating system for x86, challenging but not overwhelming, small
-but realistic enough to understand OS in depth (it can run x86 machine and simulators 
-including QEMU, Bochs and VMWare Player!). The main source code, documentation and assignments 
-are developed by Ben Pfaff and others from Stanford (refer to its [LICENSE](./LICENSE)).
 
-The course instructor ([Ryan Huang](huang@cs.jhu.edu)) made some changes to the original
-Pintos labs to tailor for his class. The upstream for this branch comes from 
-https://github.com/ryanphuang/PintosM.git. For students in the class, please
-download the release version for this branch at https://github.com/jhu-cs318/pintos.git
+## Useful links 
+* [Official Reference Material](https://www.scs.stanford.edu/20wi-cs140/reference/)
+* [Doc of PintOS](https://www.scs.stanford.edu/10wi-cs140/pintos/pintos_1.html)
+* [Another OS project](https://github.com/cfenollosa/os-tutorial)
+* [Arch Linux wiki](https://wiki.archlinux.org/index.php/Main_page)
+
+## Milestones on the project
+* Jan 17th, Take a look at reference and doc
+* Jan 21st, start at coding on sub-project 1
+* Jan 24th, finish sub-project 1, start sub-project 2
+* Jan 27th, finish sub-project 2, start sub-project 3
+* Jan 30th, finish sub-project 3, start sub-project 4
+* Feb 2nd, finish sub-project 4
