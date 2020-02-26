@@ -1,0 +1,30 @@
+set(devices_SRCS
+        block.h
+        block.c
+        ide.c
+        ide.h
+        input.h
+        input.c
+        intq.c
+        intq.h
+        kbd.c
+        kbd.h
+        partition.c
+        partition.h
+        pit.c
+        pit.h
+        timer.c
+        timer.h
+        rtc.c
+        rtc.h
+        speaker.c
+        speaker.h
+        serial.c
+        serial.h
+        vga.c
+        vga.h
+        shutdown.c
+        shutdown.h
+        )
+
+add_library(devices ${devices_SRCS})
