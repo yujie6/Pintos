@@ -107,24 +107,12 @@ fi
 TARGET=i386-elf
 
 # Download sources
-if [ $tool == "all" -o $tool == "binutils" ]; then
-  download_and_check https://ftp.gnu.org/gnu/binutils/binutils-2.27.tar.gz 26253bf0f360ceeba1d9ab6965c57c6a48a01a8343382130d1ed47c468a3094f
-fi
-if [ $tool == "all" -o $tool == "gcc" ]; then
-  download_and_check https://ftp.gnu.org/gnu/gcc/gcc-6.2.0/gcc-6.2.0.tar.bz2 9944589fc722d3e66308c0ce5257788ebd7872982a718aa2516123940671b7c5
-  if [ ! -d $CWD/src/gcc-6.2.0/mpfr ]; then
-    cd $CWD/src/gcc-6.2.0 && contrib/download_prerequisites || perror "Failed to download pre-requisite for GCC"
-  fi
-fi
-if [ $tool == "all" -o $tool == "gdb" ]; then
-  download_and_check https://ftp.gnu.org/gnu/gdb/gdb-7.9.1.tar.xz cd9c543a411a05b2b647dd38936034b68c2b5d6f10e0d51dc168c166c973ba40
-fi
-
+# 
 if [ $tool == "all" -o $tool == "binutils" ]; then
   echo "Building binutils..."
   mkdir -p $CWD/build/binutils && cd $CWD/build/binutils
   ../../src/binutils-2.27/configure --prefix=$PREFIX --target=$TARGET \
-    --disable-multilib --disable-nls --disable-werror || perror "Failed to configure binutils"
+    --disable-multilib --disable-bootstrap --disable-nls --disable-werror || perror "Failed to configure binutils"
   make -j8 || perror "Failed to make binutils"
   make install
 fi

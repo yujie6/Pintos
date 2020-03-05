@@ -57,6 +57,8 @@ static const char *swap_bdev_name;
 #endif
 #endif /* FILESYS */
 
+extern bool BOOT_COMPLETE;
+
 /* -ul: Maximum number of pages to put into palloc's user pool. */
 static size_t user_page_limit = SIZE_MAX;
 
@@ -83,7 +85,7 @@ int pintos_init(void) NO_RETURN;
 int
 pintos_init(void) {
     char **argv;
-
+    BOOT_COMPLETE = false;
     /* Clear BSS. */
     bss_init();
 
@@ -134,6 +136,7 @@ pintos_init(void) {
 #endif
 
     printf("Boot complete.\n");
+    BOOT_COMPLETE = true;
 
     if (*argv != NULL) {
         /* Run actions specified on kernel command line. */

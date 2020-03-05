@@ -86,6 +86,7 @@ struct thread {
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -108,6 +109,8 @@ extern bool thread_mlfqs;
 void thread_init(void);
 
 void thread_start(void);
+
+void thread_wakeup(void);
 
 void thread_tick(void);
 
@@ -147,5 +150,7 @@ void thread_set_nice(int);
 int thread_get_recent_cpu(void);
 
 int thread_get_load_avg(void);
+
+void blocked_thread_check (struct thread *t, void *aux UNUSED);
 
 #endif /* threads/thread.h */

@@ -107,6 +107,16 @@ thread_init(void) {
     initial_thread->tid = allocate_tid();
 }
 
+void thread_wakeup(void) {
+    struct list_elem *e;
+    ASSERT(intr_get_level() == INTR_OFF);
+    for (e = list_begin(&all_list); e != list_end(&all_list);
+         e = list_next(e)) {
+        struct thread *t = list_entry(e,struct thread, allelem);
+        blocked_thread_check(t, NULL);
+    }
+}
+
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -300,9 +310,9 @@ thread_yield(void) {
     struct thread *cur = thread_current();
     enum intr_level old_level;
 
-    ASSERT(!intr_context());
+    ASSERT(!intr_context()); // int from inside
 
-    old_level = intr_disable();
+    old_level = intr_disable(); // interrupt to schedule
     if (cur != idle_thread)
         list_push_back(&ready_list, &cur->elem);
     cur->status = THREAD_READY;
@@ -320,8 +330,9 @@ thread_foreach(thread_action_func *func, void *aux) {
 
     for (e = list_begin(&all_list); e != list_end(&all_list);
          e = list_next(e)) {
-        struct thread *t = list_entry(e,
-                                      struct thread, allelem);
+        struct thread *t = list_entry(e,struct thread, allelem);
+        printf("Now apply block check func at thread\n");
+        // not work at all
         func(t, aux);
     }
 }
@@ -421,7 +432,10 @@ running_thread(void) {
        always at the beginning of a page and the stack pointer is
        somewhere in the middle, this locates the curent thread. */
     asm ("mov %%esp, %0" : "=g" (esp));
+    // why stack pointer ? because esp is modified by thread
+    // stack pointer points to current page, doing a round_down could find the thread addr
     return pg_round_down(esp);
+    // make the right 12 bits to be 0
 }
 
 /* Returns true if T appears to point to a valid thread. */
@@ -442,6 +456,7 @@ init_thread(struct thread *t, const char *name, int priority) {
 
     memset(t, 0, sizeof *t);
     t->status = THREAD_BLOCKED;
+    t->ticks_blocked = 0;
     strlcpy(t->name, name, sizeof t->name);
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
@@ -561,3 +576,15 @@ allocate_tid(void) {
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof(
         struct thread, stack);
+
+
+void blocked_thread_check(struct thread *t, void *aux UNUSED) {
+    // printf("checking block thread now\n");
+    if (t->status == THREAD_BLOCKED && t->ticks_blocked > 0) {
+
+        t->ticks_blocked--;
+        if (t->ticks_blocked == 0) {
+            thread_unblock(t);
+        }
+    }
+}

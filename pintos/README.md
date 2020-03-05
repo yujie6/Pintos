@@ -6,10 +6,20 @@
 * [Another OS project](https://github.com/cfenollosa/os-tutorial)
 * [Arch Linux wiki](https://wiki.archlinux.org/index.php/Main_page)
 
-## Milestones on the project
-* Jan 17th, Take a look at reference and doc
-* Jan 21st, start at coding on sub-project 1
-* Jan 24th, finish sub-project 1, start sub-project 2
-* Jan 27th, finish sub-project 2, start sub-project 3
-* Jan 30th, finish sub-project 3, start sub-project 4
-* Feb 2nd, finish sub-project 4
+## Environment Build Notes 
+Local env: 
+    
+    gcc version 9.2.1 20200130 (Arch Linux 9.2.1+20200130-2)
+    
+Using local gcc 
+* run smoothly
+* pintos-dbg fail
+
+Install i386-elf toolchain
+* toolchain-build.sh -> error
+* binutils good
+* gcc-6.2.0 -> [error](https://github.com/crosstool-ng/crosstool-ng/issues/735)
+* gcc-6.4.0 -> error
+* gdb-7.9.1 -> [error](https://github.com/nativeos/pkgbuild-i386-elf-toolchain/issues/1)
+* gdb-8.1 / gdb-7.12 exactly the same error
+* gdb-8.2 works smoothly

@@ -74,6 +74,8 @@ intr_get_level(void) {
        and "POP" and [IA32-v3a] 5.8.1 "Masking Maskable Hardware
        Interrupts". */
     asm volatile ("pushfl; popl %0" : "=g" (flags));
+    // push flag, output = %0 = flags = pop()
+    // "=g" is something to set store type, like =r -> must use register
 
     return flags & FLAG_IF ? INTR_ON : INTR_OFF;
 }
@@ -90,13 +92,11 @@ enum intr_level
 intr_enable(void) {
     enum intr_level old_level = intr_get_level();
     ASSERT (!intr_context());
-
-    /* Enable interrupts by setting the interrupt flag.
-
-       See [IA32-v2b] "STI" and [IA32-v3a] 5.8.1 "Masking Maskable
-       Hardware Interrupts". */
     asm volatile ("sti");
-
+    /*
+     * CLI     中断标志置0指令
+     * STI     中断标志置1指令
+     */
     return old_level;
 }
 
@@ -104,11 +104,7 @@ intr_enable(void) {
 enum intr_level
 intr_disable(void) {
     enum intr_level old_level = intr_get_level();
-
-    /* Disable interrupts by clearing the interrupt flag.
-       See [IA32-v2b] "CLI" and [IA32-v3a] 5.8.1 "Masking Maskable
-       Hardware Interrupts". */
-    asm volatile ("cli" : : : "memory");
+    asm volatile ("cli" : : : "memory"); // clear interrupt
 
     return old_level;
 }
@@ -202,7 +198,7 @@ intr_register_int(uint8_t vec_no, int dpl, enum intr_level level,
     register_handler(vec_no, dpl, level, handler, name);
 }
 
-/* Returns true during processing of an external interrupt
+/* Returns true during processing of an external interrupt (like IO)
    and false at all other times. */
 bool
 intr_context(void) {

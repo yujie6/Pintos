@@ -45,8 +45,8 @@ static bool page_from_pool(const struct pool *, void *page);
 void
 palloc_init(size_t user_page_limit) {
     /* Free memory starts at 1 MB and runs to the end of RAM. */
-    uint8_t *free_start = ptov(1024 * 1024);
-    uint8_t *free_end = ptov(init_ram_pages * PGSIZE);
+    uint8_t *free_start = ptov(1024 * 1024); // 1MB + 3GB
+    uint8_t *free_end = ptov(init_ram_pages * PGSIZE); // num * 4KB
     size_t free_pages = (free_end - free_start) / PGSIZE;
     size_t user_pages = free_pages / 2;
     size_t kernel_pages;
@@ -147,7 +147,7 @@ init_pool(struct pool *p, void *base, size_t page_cnt, const char *name) {
     /* We'll put the pool's used_map at its base.
        Calculate the space needed for the bitmap
        and subtract it from the pool's size. */
-    size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size(page_cnt), PGSIZE);
+    size_t bm_pages = DIV_ROUND_UP (bitmap_buf_size(page_cnt), PGSIZE); // page_id = size / pgsize
     if (bm_pages > page_cnt)
         PANIC ("Not enough memory in %s for bitmap.", name);
     page_cnt -= bm_pages;
