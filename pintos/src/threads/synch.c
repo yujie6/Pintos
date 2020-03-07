@@ -190,6 +190,7 @@ lock_acquire(struct lock *lock) {
     ASSERT (!lock_held_by_current_thread(lock));
 
     if (lock->holder != NULL && !thread_mlfqs) {
+        // no donation when using mlfqs
         current_thread->lock_waiting = lock;
         l = lock;
         while (l && current_thread->priority > l->max_priority) {

@@ -9,6 +9,6 @@ set(threads_SRCS
         loader.h
         pte.h
         flags.h
-        )
+        fixed-point.h)
 
 add_library(threads ${threads_SRCS})

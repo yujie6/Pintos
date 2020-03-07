@@ -5,6 +5,7 @@
 * 2.26 add CMakeLists.txt
 * 3.1 improve timer_sleep, pass 4 basic tests
 * 3.5 build i386-elf-gdb, now able to use pintos-gdb to debug!
+* 3.7 priority donation done, learn some mlfqs
 
 ## Useful links 
 * [Official Reference Material](https://www.scs.stanford.edu/20wi-cs140/reference/)

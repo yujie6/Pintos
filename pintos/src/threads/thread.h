@@ -85,6 +85,7 @@ struct thread {
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
+    int nice;                           /* Thread nice value, for mlfqs */
     int priority;                       /* Priority. */
     int original_priority;              /* Priority before donating */
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
