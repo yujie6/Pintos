@@ -107,16 +107,6 @@ thread_init(void) {
     initial_thread->tid = allocate_tid();
 }
 
-void thread_wakeup(void) {
-    struct list_elem *e;
-    ASSERT(intr_get_level() == INTR_OFF);
-    for (e = list_begin(&all_list); e != list_end(&all_list);
-         e = list_next(e)) {
-        struct thread *t = list_entry(e,struct thread, allelem);
-        blocked_thread_check(t, NULL);
-    }
-}
-
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -213,6 +203,9 @@ thread_create(const char *name, int priority,
 
     /* Add to run queue. */
     thread_unblock(t);
+    if (thread_current()->priority < priority) {
+        thread_yield();
+    }
 
     return tid;
 }
@@ -240,6 +233,20 @@ thread_block(void) {
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
+list_less_func * get_cmp_priority_func() {
+    return (list_less_func *) &thread_cmp_priority;
+}
+
+
+bool thread_cmp_priority(const struct list_elem *a,
+                         const struct list_elem *b,
+                         void *aux) {
+    int priority_a = list_entry(a, struct thread, elem)->priority;
+    int priority_b = list_entry(b, struct thread, elem)->priority;
+    return priority_a > priority_b;
+}
+
+
 void
 thread_unblock(struct thread *t) {
     enum intr_level old_level;
@@ -248,7 +255,8 @@ thread_unblock(struct thread *t) {
 
     old_level = intr_disable();
     ASSERT(t->status == THREAD_BLOCKED);
-    list_push_back(&ready_list, &t->elem);
+    // list_push_back(&ready_list, &t->elem);
+    list_insert_ordered(&ready_list, &t->elem, (list_less_func *) &thread_cmp_priority, NULL);
     t->status = THREAD_READY;
     intr_set_level(old_level);
 }
@@ -314,7 +322,8 @@ thread_yield(void) {
 
     old_level = intr_disable(); // interrupt to schedule
     if (cur != idle_thread)
-        list_push_back(&ready_list, &cur->elem);
+        list_insert_ordered(&ready_list, &cur->elem, (list_less_func *) &thread_cmp_priority, NULL);
+    // list_push_back(&ready_list, &cur->elem);
     cur->status = THREAD_READY;
     schedule();
     intr_set_level(old_level);
@@ -323,16 +332,12 @@ thread_yield(void) {
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
-thread_foreach(thread_action_func *func, void *aux) {
+thread_foreach(thread_action_func func, void *aux) {
     struct list_elem *e;
-
     ASSERT(intr_get_level() == INTR_OFF);
-
     for (e = list_begin(&all_list); e != list_end(&all_list);
          e = list_next(e)) {
-        struct thread *t = list_entry(e,struct thread, allelem);
-        printf("Now apply block check func at thread\n");
-        // not work at all
+        struct thread *t = list_entry(e, struct thread, allelem);
         func(t, aux);
     }
 }
@@ -340,7 +345,16 @@ thread_foreach(thread_action_func *func, void *aux) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority(int new_priority) {
-    thread_current()->priority = new_priority;
+    struct thread *cur = thread_current();
+    enum intr_level old_level = intr_disable();
+    int old_priority = cur->priority;
+    cur->original_priority = new_priority;
+    if (list_empty(&cur->lock_list) || new_priority > old_priority) {
+        cur->priority = new_priority;
+        thread_yield();
+    }
+
+    intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -460,10 +474,14 @@ init_thread(struct thread *t, const char *name, int priority) {
     strlcpy(t->name, name, sizeof t->name);
     t->stack = (uint8_t *) t + PGSIZE;
     t->priority = priority;
+    t->original_priority = priority;
+    t->lock_waiting = NULL;
+    list_init(&t->lock_list);
     t->magic = THREAD_MAGIC;
 
     old_level = intr_disable();
-    list_push_back(&all_list, &t->allelem);
+    // list_push_back(&all_list, &t->allelem);
+    list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
     intr_set_level(old_level);
 }
 
@@ -577,14 +595,61 @@ allocate_tid(void) {
 uint32_t thread_stack_ofs = offsetof(
         struct thread, stack);
 
+bool lock_cmp_priority(const struct list_elem *a,
+                       const struct list_elem *b,
+                       void *aux) {
+    int priority_a = list_entry(a, struct lock, elem)->max_priority;
+    int priority_b = list_entry(b, struct lock, elem)->max_priority;
+    return priority_a > priority_b;
+}
 
-void blocked_thread_check(struct thread *t, void *aux UNUSED) {
-    // printf("checking block thread now\n");
-    if (t->status == THREAD_BLOCKED && t->ticks_blocked > 0) {
 
-        t->ticks_blocked--;
-        if (t->ticks_blocked == 0) {
-            thread_unblock(t);
-        }
+void
+thread_update_priority(struct thread *t) {
+    enum intr_level old_level = intr_disable();
+    int max_priority = t->original_priority;
+    int lock_priority;
+
+    if (!list_empty(&t->lock_list)) {
+        list_sort(&t->lock_list, lock_cmp_priority, NULL);
+        lock_priority = list_entry (list_front(&t->lock_list), struct lock, elem)->max_priority;
+        if (lock_priority > max_priority)
+            max_priority = lock_priority;
     }
+
+    t->priority = max_priority;
+    intr_set_level(old_level);
+}
+
+
+/* Donate current priority to thread t. */
+void
+thread_donate_priority(struct thread *t) {
+    enum intr_level old_level = intr_disable();
+    thread_update_priority(t);
+
+    if (t->status == THREAD_READY) {
+        list_remove(&t->elem);
+        list_insert_ordered(&ready_list, &t->elem, thread_cmp_priority, NULL);
+    }
+    intr_set_level(old_level);
+}
+
+void thread_remove_lock(struct lock *lock) {
+    enum intr_level old_level = intr_disable();
+    list_remove(&lock->elem);
+    thread_update_priority(thread_current());
+    intr_set_level(old_level);
+}
+
+void thread_hold_the_lock(struct lock *lock) {
+    enum intr_level old_level = intr_disable();
+    list_insert_ordered(&thread_current()->lock_list, &lock->elem, lock_cmp_priority, NULL);
+
+    if (lock->max_priority > thread_current()->priority) {
+        thread_current()->priority = lock->max_priority;
+        thread_yield();
+    }
+
+    intr_set_level(old_level);
 }

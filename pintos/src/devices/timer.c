@@ -79,6 +79,7 @@ timer_ticks(void) {
     return t;
 }
 
+
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
 int64_t
@@ -97,13 +98,10 @@ timer_sleep(int64_t ticks) {
 
     ASSERT (intr_get_level() == INTR_ON);
     enum intr_level old_level = intr_disable();
-    struct thread * cur = thread_current();
+    struct thread *cur = thread_current();
     cur->ticks_blocked = ticks;
     thread_block();
     intr_set_level(old_level);
-//    // keep yielding thread
-//    while (timer_elapsed(start) < ticks)
-//        thread_yield();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,17 +168,24 @@ timer_print_stats(void) {
 }
 
 /* Timer interrupt handler. */
+
+void thread_blocked_check(struct thread *t, void *aux UNUSED) {
+    // printf("checking block thread now\n");
+    if (t->status == THREAD_BLOCKED && t->ticks_blocked > 0) {
+        t->ticks_blocked--;
+        if (t->ticks_blocked == 0) {
+            thread_unblock(t);
+        }
+    }
+}
+
 static void
 timer_interrupt(struct intr_frame *args UNUSED) {
     ticks++;
-//    if (BOOT_COMPLETE) {
-//        printf("begin the shitty timer interrupt.\n");
-//        enum intr_level old_level = intr_disable();
-//        thread_foreach(blocked_thread_check, NULL);
-//        intr_set_level(old_level);
-//        printf("end the shitty timer interrupt.\n");
-//    }
-    thread_wakeup();
+    enum intr_level old_level = intr_disable();
+    thread_foreach(thread_blocked_check, NULL);
+    intr_set_level(old_level);
+    // thread_wakeup();
     thread_tick();
 }
 
@@ -247,3 +252,7 @@ real_time_delay(int64_t num, int32_t denom) {
     ASSERT (denom % 1000 == 0);
     busy_wait(loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000));
 }
+
+
+
+

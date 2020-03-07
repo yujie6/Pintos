@@ -2,13 +2,7 @@
 
 all:
 
-# -*- makefile -*-
-
-kernel.bin: DEFINES =
-KERNEL_SUBDIRS = threads devices lib lib/kernel $(TEST_SUBDIRS)
-TEST_SUBDIRS = tests/threads
-GRADING_FILE = $(SRCDIR)/tests/threads/Grading
-SIMULATOR = --bochs
+include Make.vars
 
 DIRS = $(sort $(addprefix build/,$(KERNEL_SUBDIRS) $(TEST_SUBDIRS) lib/user))
 

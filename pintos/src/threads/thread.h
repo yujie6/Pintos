@@ -86,8 +86,11 @@ struct thread {
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int original_priority;              /* Priority before donating */
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
+    struct list lock_list;
+    struct lock *lock_waiting;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -110,8 +113,6 @@ void thread_init(void);
 
 void thread_start(void);
 
-void thread_wakeup(void);
-
 void thread_tick(void);
 
 void thread_print_stats(void);
@@ -121,6 +122,12 @@ typedef void thread_func(void *aux);
 tid_t thread_create(const char *name, int priority, thread_func *, void *);
 
 void thread_block(void);
+
+list_less_func * get_cmp_priority_func();
+
+bool thread_cmp_priority(const struct list_elem *a,
+                         const struct list_elem *b,
+                         void *aux);
 
 void thread_unblock(struct thread *);
 
@@ -135,9 +142,9 @@ void thread_exit(void) NO_RETURN;
 void thread_yield(void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
-typedef void thread_action_func(struct thread *t, void *aux);
+typedef void (*thread_action_func)(struct thread *t, void *aux);
 
-void thread_foreach(thread_action_func *, void *);
+void thread_foreach(thread_action_func, void *);
 
 int thread_get_priority(void);
 
@@ -151,6 +158,10 @@ int thread_get_recent_cpu(void);
 
 int thread_get_load_avg(void);
 
-void blocked_thread_check (struct thread *t, void *aux UNUSED);
+void thread_donate_priority (struct thread *t);
+
+void thread_remove_lock(struct lock* lock);
+
+void thread_hold_the_lock(struct lock *lock);
 
 #endif /* threads/thread.h */
