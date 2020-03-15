@@ -1,10 +1,12 @@
 #include "userprog/pagedir.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
+#include "debug.h"
 
 static uint32_t *active_pd(void);
 

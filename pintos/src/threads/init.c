@@ -32,6 +32,7 @@
 #else
 
 #include "tests/threads/tests.h"
+#include "fixed-point.h"
 
 #endif
 #ifdef FILESYS
@@ -81,6 +82,8 @@ static void locate_block_device (enum block_type, const char *name);
 
 int pintos_init(void) NO_RETURN;
 
+fixed_point_t global_load_avg;
+
 /* Pintos main entry point. */
 int
 pintos_init(void) {
@@ -92,6 +95,7 @@ pintos_init(void) {
     /* Break command line into arguments and parse options. */
     argv = read_command_line();
     argv = parse_options(argv);
+    global_load_avg = fix_int(0);
 
     /* Initialize ourselves as a thread so we can use locks,
        then enable console locking. */
@@ -174,6 +178,7 @@ paging_init(void) {
 
     pd = init_page_dir = palloc_get_page(PAL_ASSERT | PAL_ZERO);
     pt = NULL;
+    // init page table
     for (page = 0; page < init_ram_pages; page++) {
         uintptr_t paddr = page * PGSIZE;
         char *vaddr = ptov(paddr);

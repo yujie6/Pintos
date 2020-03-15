@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -37,6 +38,9 @@ static struct thread *initial_thread;
 
 /* Lock used by allocate_tid(). */
 static struct lock tid_lock;
+
+/* average number of thread ready to run last minute */
+extern fixed_point_t global_load_avg;
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame {
@@ -233,7 +237,7 @@ thread_block(void) {
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
-list_less_func * get_cmp_priority_func() {
+list_less_func *get_cmp_priority_func() {
     return (list_less_func *) &thread_cmp_priority;
 }
 
@@ -346,6 +350,10 @@ thread_foreach(thread_action_func func, void *aux) {
 void
 thread_set_priority(int new_priority) {
     struct thread *cur = thread_current();
+    if (thread_mlfqs) {
+        printf("\n\n !!!mlfqs should not set priority\n\n\n");
+        return;
+    }
     enum intr_level old_level = intr_disable();
     int old_priority = cur->priority;
     cur->original_priority = new_priority;
@@ -363,10 +371,32 @@ thread_get_priority(void) {
     return thread_current()->priority;
 }
 
+int get_ready_list_size(void) {
+    return list_size(&ready_list) + ((thread_current() != idle_thread) ?  1 : 0);
+};
 
-void update_priority_by_nice() {
-    thread_current()->priority =
-            PRI_MAX - (int)(thread_get_recent_cpu() / 4) - (thread_current()->nice * 2);
+void update_thread_recent_cpu(struct thread * t, void *aux) {
+    fixed_point_t load_avg_2 = fix_mul(fix_int(2), global_load_avg);
+    fixed_point_t tmp = fix_div(load_avg_2, fix_add(load_avg_2, fix_int(1)));
+    t->recent_cpu = fix_add(fix_mul(t->recent_cpu, tmp), fix_int(t->nice));
+}
+
+void update_thread_priority_mlfqs(struct thread * t, void * aux) {
+    t->priority = PRI_MAX - fix_round(fix_div(t->recent_cpu, fix_int(4)))
+            - t->nice * 2;
+}
+
+void update_all_priority(void) {
+    thread_foreach((thread_action_func) &update_thread_priority_mlfqs, NULL);
+}
+
+void update_all_recent_cpu(void) {
+    thread_foreach((thread_action_func) &update_thread_recent_cpu, NULL);
+}
+
+void update_cur_thread_cpu(void) {
+    struct thread *cur = thread_current();
+    cur->recent_cpu = fix_add(cur->recent_cpu, fix_int(1));
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -375,7 +405,7 @@ thread_set_nice(int new_nice) {
     /* Not yet implemented. */
     struct thread *cur = thread_current();
     cur->nice = new_nice;
-    update_priority_by_nice(cur);
+    update_thread_priority_mlfqs(cur, NULL);
 
 }
 
@@ -385,18 +415,25 @@ thread_get_nice(void) {
     return thread_current()->nice;
 }
 
+
+void update_load_avg(void) {
+    fixed_point_t a = fix_frac(get_ready_list_size(), 60);
+    fixed_point_t b = fix_mul(fix_frac(59, 60), global_load_avg);
+    global_load_avg = fix_add(a, b);
+}
+
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg(void) {
-    /* Not yet implemented. */
-    return 0;
+    // bool load_avg =d
+    return fix_round( fix_mul(fix_int(100), global_load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu(void) {
     /* Not yet implemented. */
-    return 0;
+    return fix_round(fix_mul(fix_int(100), thread_current()->recent_cpu) );
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -536,6 +573,8 @@ next_thread_to_run(void) {
 
    After this function and its caller returns, the thread switch
    is complete. */
+extern bool BOOT_COMPLETE;
+
 void
 thread_schedule_tail(struct thread *prev) {
     struct thread *cur = running_thread();
@@ -549,8 +588,8 @@ thread_schedule_tail(struct thread *prev) {
     thread_ticks = 0;
 
 #ifdef USERPROG
-    /* Activate the new address space. */
-    process_activate ();
+    if (BOOT_COMPLETE)
+        process_activate();
 #endif
 
     /* If the thread we switched from is dying, destroy its struct

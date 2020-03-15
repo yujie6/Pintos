@@ -182,6 +182,19 @@ void thread_blocked_check(struct thread *t, void *aux UNUSED) {
 static void
 timer_interrupt(struct intr_frame *args UNUSED) {
     ticks++;
+    if (thread_mlfqs) {
+
+        update_cur_thread_cpu();
+        if (ticks % TIMER_FREQ == 0) {
+            update_load_avg();
+            // printf("Another one second pass, load_avg=%d. \n", thread_get_load_avg());
+            update_all_recent_cpu();
+        }
+
+        if (ticks % 4) {
+            update_all_priority();
+        }
+    }
     enum intr_level old_level = intr_disable();
     thread_foreach(thread_blocked_check, NULL);
     intr_set_level(old_level);
