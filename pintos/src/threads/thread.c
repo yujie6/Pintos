@@ -204,7 +204,6 @@ thread_create(const char *name, int priority,
     sf = alloc_frame(t, sizeof *sf);
     sf->eip = switch_entry;
     sf->ebp = 0;
-
     /* Add to run queue. */
     thread_unblock(t);
     if (thread_current()->priority < priority) {
@@ -382,6 +381,10 @@ void update_thread_recent_cpu(struct thread * t, void *aux) {
 }
 
 void update_thread_priority_mlfqs(struct thread * t, void * aux) {
+    ASSERT(thread_mlfqs);
+    if (t == idle_thread) {
+        return;
+    }
     t->priority = PRI_MAX - fix_round(fix_div(t->recent_cpu, fix_int(4)))
             - t->nice * 2;
 }
@@ -406,7 +409,7 @@ thread_set_nice(int new_nice) {
     struct thread *cur = thread_current();
     cur->nice = new_nice;
     update_thread_priority_mlfqs(cur, NULL);
-
+    thread_yield();
 }
 
 /* Returns the current thread's nice value. */
@@ -524,7 +527,11 @@ init_thread(struct thread *t, const char *name, int priority) {
     t->lock_waiting = NULL;
     list_init(&t->lock_list);
     t->magic = THREAD_MAGIC;
-
+    if (thread_mlfqs) {
+        t->nice = 0;
+        t->recent_cpu = fix_int(0);
+        update_thread_priority_mlfqs(t, NULL);
+    }
     old_level = intr_disable();
     // list_push_back(&all_list, &t->allelem);
     list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
