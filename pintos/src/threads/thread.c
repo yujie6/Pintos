@@ -207,7 +207,9 @@ thread_create(const char *name, int priority,
     /* Add to run queue. */
     thread_unblock(t);
     if (thread_current()->priority < priority) {
+        enum intr_level old_level = intr_disable();
         thread_yield();
+        intr_set_level(old_level);
     }
 
     return tid;
@@ -409,7 +411,9 @@ thread_set_nice(int new_nice) {
     struct thread *cur = thread_current();
     cur->nice = new_nice;
     update_thread_priority_mlfqs(cur, NULL);
+    enum intr_level old_level = intr_disable();
     thread_yield();
+    intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */

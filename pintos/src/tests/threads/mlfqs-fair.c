@@ -85,8 +85,12 @@ test_mlfqs_fair (int thread_cnt, int nice_min, int nice_step)
     {
       struct thread_info *ti = &(info[i]);
       char name[16];
-
-      ti->start_time = 0;
+      // this is extremely strange!!
+      // when using ti->start_time = start_time, we have
+      // Unexpected interrupt 0x06 (#UD Invalid Opcode Exception)
+      // printf("The start time '%d' has huge problem...\n", start_time);
+      ASSERT(start_time == 36);
+      ti->start_time = start_time;
       ti->tick_count = 0;
       ti->nice = nice;
 
