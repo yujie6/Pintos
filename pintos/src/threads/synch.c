@@ -99,6 +99,9 @@ sema_try_down(struct semaphore *sema) {
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
+
+bool BOOT_COMPLETE;
+
 void
 sema_up(struct semaphore *sema) {
     enum intr_level old_level;
@@ -112,7 +115,14 @@ sema_up(struct semaphore *sema) {
         thread_unblock(list_entry (list_pop_front(&sema->waiters),
                                    struct thread, elem));
     }
+//    if (BOOT_COMPLETE)
+//        thread_yield();
+#ifdef USERPROG
+
+#else
     thread_yield();
+#endif
+
     intr_set_level(old_level);
 }
 
@@ -182,7 +192,7 @@ lock_init(struct lock *lock) {
    we need to sleep. */
 void
 lock_acquire(struct lock *lock) {
-    struct thread *current_thread = thread_current ();
+    struct thread *current_thread = thread_current();
     struct lock *l;
 
     ASSERT (lock != NULL);
@@ -202,7 +212,7 @@ lock_acquire(struct lock *lock) {
     }
     sema_down(&lock->semaphore);
 
-    enum intr_level old_level = intr_disable ();
+    enum intr_level old_level = intr_disable();
     current_thread = thread_current();
     if (!thread_mlfqs) {
         current_thread->lock_waiting = NULL;
@@ -316,8 +326,8 @@ cond_wait(struct condition *cond, struct lock *lock) {
 bool sema_cmp_priority(const struct list_elem *a,
                        const struct list_elem *b,
                        void *aux) {
-    struct semaphore_elem * sema_a = list_entry(a, struct semaphore_elem, elem);
-    struct semaphore_elem * sema_b = list_entry(b, struct semaphore_elem, elem);
+    struct semaphore_elem *sema_a = list_entry(a, struct semaphore_elem, elem);
+    struct semaphore_elem *sema_b = list_entry(b, struct semaphore_elem, elem);
     int priority_a = list_entry(list_front(&sema_a->semaphore.waiters), struct thread, elem)->priority;
     int priority_b = list_entry(list_front(&sema_b->semaphore.waiters), struct thread, elem)->priority;
     return priority_a > priority_b;
@@ -336,7 +346,7 @@ cond_signal(struct condition *cond, struct lock *lock UNUSED) {
     ASSERT (lock != NULL);
     ASSERT (!intr_context());
     ASSERT (lock_held_by_current_thread(lock));
-    list_sort (&cond->waiters, sema_cmp_priority, NULL);
+    list_sort(&cond->waiters, sema_cmp_priority, NULL);
     // put the one with least sema value at front
     if (!list_empty(&cond->waiters))
         sema_up(&list_entry (list_pop_front(&cond->waiters),

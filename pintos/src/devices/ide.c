@@ -264,7 +264,6 @@ identify_ata_device(struct ata_disk *d) {
        indicating the device's response is ready, and read the data
        into our buffer. */
     select_device_wait(d);
-    printf("Every thing works fine now\n\n");
     issue_pio_command(c, CMD_IDENTIFY_DEVICE);
     sema_down(&c->completion_wait);
     if (!wait_while_busy(d)) {
@@ -272,7 +271,6 @@ identify_ata_device(struct ata_disk *d) {
         return;
     }
     input_sector(c, id);
-    printf("Every thing works fine after sema_down\n\n");
 
     /* Calculate capacity.
        Read model name and serial number. */

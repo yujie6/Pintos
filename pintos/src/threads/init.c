@@ -135,10 +135,8 @@ pintos_init(void) {
 #ifdef FILESYS
     /* Initialize file system. */
     ide_init ();
-    printf("ide init complete.\n");
     locate_block_devices ();
     filesys_init (format_filesys);
-    printf("filesys init complete.\n");
 #endif
 
     printf("Boot complete.\n");
@@ -290,6 +288,7 @@ parse_options(char **argv) {
 }
 
 /* Runs the task specified in ARGV[1]. */
+// try passing argv to process_execute
 static void
 run_task(char **argv) {
     const char *task = argv[1];
