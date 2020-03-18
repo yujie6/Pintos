@@ -8,6 +8,7 @@
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -189,6 +190,17 @@ thread_create(const char *name, int priority,
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t->tid = allocate_tid();
+    /* build relationship with prent */
+    if (thread_current() != NULL) {
+        struct thread *parent = thread_current();
+        t->parent = parent;
+        struct process_info * info_t = (struct process_info*) malloc (sizeof(struct process_info));
+        info_t->is_waiting = false;
+        info_t->has_exited = false;
+        info_t->tid = tid;
+        info_t->thread_ = t;
+        list_insert(parent->child_list.head.next, &info_t->elem);
+    }
 
     /* Stack frame for kernel_thread(). */
     kf = alloc_frame(t, sizeof *kf);
@@ -530,6 +542,7 @@ init_thread(struct thread *t, const char *name, int priority) {
     t->original_priority = priority;
     t->lock_waiting = NULL;
     list_init(&t->lock_list);
+    list_init(&t->child_list);
     t->magic = THREAD_MAGIC;
     if (thread_mlfqs) {
         t->nice = 0;

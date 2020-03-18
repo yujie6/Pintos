@@ -19,6 +19,7 @@
 #define PGBITS  12                         /* Number of offset bits. */
 #define PGSIZE  (1 << PGBITS)              /* Bytes in a page. */
 #define PGMASK  BITMASK(PGSHIFT, PGBITS)   /* Page offset bits (0:12). */
+// -4096 also 0xffff000
 
 /* Offset within a page. */
 static inline unsigned pg_ofs(const void *va) {

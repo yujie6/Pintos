@@ -7,6 +7,7 @@
 #include <string.h>
 #include <lib/user/syscall.h>
 #include <threads/malloc.h>
+#include <threads/synch.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -109,6 +110,18 @@ start_process(void *file_name_) {
     NOT_REACHED ();
 }
 
+struct process_info *get_child_process(tid_t child_tid, struct list child_list) {
+    struct list_elem * e;
+    for (e = list_begin(&child_list); e != list_end(&child_list);
+         e = list_next(e)) {
+        struct process_info *t = list_entry(e, struct process_info, elem);
+        if (t->tid == child_tid) {
+            return t;
+        }
+    }
+    return NULL;
+}
+
 /* Waits for thread TID to die and returns its exit status.  If
    it was terminated by the kernel (i.e. killed due to an
    exception), returns -1.  If TID is invalid or if it was not a
@@ -120,9 +133,26 @@ start_process(void *file_name_) {
    does nothing. */
 int
 process_wait(tid_t child_tid UNUSED) {
-    return -1;
-    while (true) {
+    struct process_info *child = get_child_process(child_tid, thread_current()->child_list);
+    if (child == NULL || child->is_waiting)
+        return -1;
+    child->is_waiting = true;
+    while(!child->has_exited) {
         thread_yield();
+    }
+    printf("waiting for child done.\n\n");
+    list_remove(&child->elem);
+    return -1;
+}
+
+void remove_all_children(struct thread * t) {
+    struct list_elem * e;
+    if (!list_empty(&t->child_list)) {
+        for (e = list_begin(&t->child_list), e != list_end(&t->child_list); e = list_next(e);) {
+            struct process_info *child_info = list_entry(e, struct process_info, elem);
+            // make sure it's not an orphan
+            free(child_info);
+        }
     }
 }
 
@@ -131,7 +161,12 @@ void
 process_exit(void) {
     struct thread *cur = thread_current();
     uint32_t *pd;
-
+    // kill children processes
+    remove_all_children(cur);
+    struct list brother_list = cur->parent->child_list;
+    struct process_info * info_t = get_child_process(cur->tid, brother_list);
+    info_t->has_exited = true;
+    printf("child exit done\n\n");
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -212,7 +247,7 @@ struct Elf32_Phdr {
 
 /* Values for p_type.  See [ELF1] 2-3. */
 #define PT_NULL    0            /* Ignore. */
-#define PT_LOAD    1            /* Loadable segment. */
+#define PT_LOAD    1            /* Loadable segment. also called PROGBITS */
 #define PT_DYNAMIC 2            /* Dynamic linking info. */
 #define PT_INTERP  3            /* Name of dynamic loader. */
 #define PT_NOTE    4            /* Auxiliary info. */
@@ -266,6 +301,8 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     if (file == NULL) {
         printf("load: %s: open failed\n", args->argv[0]);
         goto done;
+    } else {
+        printf("load: %s: open successfully\n", args->argv[0]);
     }
 
     /* Read and verify executable header. */
@@ -278,11 +315,14 @@ load(const char *file_name, void (**eip)(void), void **esp) {
         || ehdr.e_phnum > 1024) {
         printf("load: %s: error loading executable\n", args->argv[0]);
         goto done;
+    } else {
+        printf("load: %s: loading executable done\n", args->argv[0]);
     }
 
     /* Read program headers. */
     file_ofs = ehdr.e_phoff;
-    for (i = 0; i < ehdr.e_phnum; i++) {
+    printf("Start of program headers: %d\n", file_ofs);
+    for (i = 0; i < ehdr.e_phnum; i++) { // Number of program headers
         struct Elf32_Phdr phdr;
 
         if (file_ofs < 0 || file_ofs > file_length(file))
@@ -291,6 +331,8 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 
         if (file_read(file, &phdr, sizeof phdr) != sizeof phdr)
             goto done;
+        printf("[load] vaddr read from %dth segment: %d\n", i, phdr.p_vaddr);
+        printf("[load] offset read from %dth segment: %d\n", i, phdr.p_offset);
         file_ofs += sizeof phdr;
         switch (phdr.p_type) {
             case PT_NULL:
@@ -323,9 +365,12 @@ load(const char *file_name, void (**eip)(void), void **esp) {
                         read_bytes = 0;
                         zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                     }
+                    printf("[load] page offset computed from vaddr: %d\n", zero_bytes);
                     if (!load_segment(file, file_page, (void *) mem_page,
-                                      read_bytes, zero_bytes, writable))
+                                      read_bytes, zero_bytes, writable)) {
+                        printf("load: %s load segment fail.\n", args->argv[0]);
                         goto done;
+                    }
                 } else
                     goto done;
                 break;
@@ -333,8 +378,12 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     }
 
     /* Set up stack. */
-    if (!setup_stack(esp, args))
+    if (!setup_stack(esp, args)) {
+        printf("load: %s: set up stack failed\n", args->argv[0]);
         goto done;
+    } else {
+        printf("load: %s: set up stack successfully\n", args->argv[0]);
+    }
 
     /* Start address. */
     *eip = (void (*)(void)) ehdr.e_entry;
@@ -429,9 +478,13 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         if (kpage == NULL)
             return false;
 
-        /* Load this page. */
+        if (pagedir_get_page(thread_current()->pagedir, upage) != NULL) {
+            printf("install_page: this god damn page has already been used.\n");
+        }
+        /* Load this page (to kernel page, and then copy from kernel page to user page). */
         if (file_read(file, kpage, page_read_bytes) != (int) page_read_bytes) {
             palloc_free_page(kpage);
+            printf("load_segment: file read failed\n");
             return false;
         }
         memset(kpage + page_read_bytes, 0, page_zero_bytes);
@@ -439,7 +492,10 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Add the page to the process's address space. */
         if (!install_page(upage, kpage, writable)) {
             palloc_free_page(kpage);
+            printf("load_segment: install page failed for data at %d\n", upage);
             return false;
+        } else {
+            printf("load_segment: install page successful at %d\n", upage);
         }
 
         /* Advance. */
@@ -447,6 +503,7 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
     }
+    printf("load_segment: loops all done\n");
     return true;
 }
 
@@ -490,6 +547,7 @@ void * push_arguments(struct arguments *args, void **esp) {
    user virtual memory. */
 static bool
 setup_stack(void **esp, struct arguments *args) {
+    printf("setting up stack now\n");
     uint8_t *kpage;
     bool success = false;
     kpage = palloc_get_page(PAL_USER | PAL_ZERO);
@@ -519,6 +577,9 @@ install_page(void *upage, void *kpage, bool writable) {
 
     /* Verify that there's not already a page at that virtual
        address, then map our page there. */
+    if (pagedir_get_page(t->pagedir, upage) != NULL) {
+        printf("install_page: this god damn page has already been used.\n");
+    }
     return (pagedir_get_page(t->pagedir, upage) == NULL
             && pagedir_set_page(t->pagedir, upage, kpage, writable));
 }
