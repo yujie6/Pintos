@@ -50,6 +50,16 @@ intr_entry:
 .func intr_exit
 intr_exit:
         /* Restore caller's registers. */
+        /*
+        EDI = Pop();
+        	ESI = Pop();
+        	EBP = Pop();
+        	ESP = ESP + 4; //skip next 4 bytes of stack
+        	EBX = Pop();
+        	EDX = Pop();
+        	ECX = Pop();
+        	EAX = Pop();
+        */
 	popal
 	popl %gs
 	popl %fs

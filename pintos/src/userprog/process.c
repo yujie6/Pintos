@@ -106,6 +106,7 @@ start_process(void *file_name_) {
        arguments on the stack in the form of a `struct intr_frame',
        we just point the stack pointer (%esp) to our stack frame
        and jump to it. */
+    printf("ready to jump to user program\n");
     asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
     NOT_REACHED ();
 }
@@ -299,10 +300,7 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     /* Open executable file. */
     file = filesys_open(args->argv[0]);
     if (file == NULL) {
-        printf("load: %s: open failed\n", args->argv[0]);
         goto done;
-    } else {
-        printf("load: %s: open successfully\n", args->argv[0]);
     }
 
     /* Read and verify executable header. */
@@ -315,8 +313,6 @@ load(const char *file_name, void (**eip)(void), void **esp) {
         || ehdr.e_phnum > 1024) {
         printf("load: %s: error loading executable\n", args->argv[0]);
         goto done;
-    } else {
-        printf("load: %s: loading executable done\n", args->argv[0]);
     }
 
     /* Read program headers. */
@@ -331,9 +327,11 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 
         if (file_read(file, &phdr, sizeof phdr) != sizeof phdr)
             goto done;
-        printf("[load] vaddr read from %dth segment: %d\n", i, phdr.p_vaddr);
-        printf("[load] offset read from %dth segment: %d\n", i, phdr.p_offset);
+        printf("[load] vaddr read from %dth segment: %x\n", i, phdr.p_vaddr);
+        printf("[load] offset read from %dth segment: %x\n", i, phdr.p_offset);
         file_ofs += sizeof phdr;
+        if (phdr.p_filesz == 0xb4)
+            continue;
         switch (phdr.p_type) {
             case PT_NULL:
             case PT_NOTE:
@@ -365,10 +363,8 @@ load(const char *file_name, void (**eip)(void), void **esp) {
                         read_bytes = 0;
                         zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                     }
-                    printf("[load] page offset computed from vaddr: %d\n", zero_bytes);
                     if (!load_segment(file, file_page, (void *) mem_page,
                                       read_bytes, zero_bytes, writable)) {
-                        printf("load: %s load segment fail.\n", args->argv[0]);
                         goto done;
                     }
                 } else
@@ -387,7 +383,7 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 
     /* Start address. */
     *eip = (void (*)(void)) ehdr.e_entry;
-
+    printf("Program entry point: 0x%x\n" ,*eip);
     success = true;
 
     done:
@@ -478,13 +474,13 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         if (kpage == NULL)
             return false;
 
-        if (pagedir_get_page(thread_current()->pagedir, upage) != NULL) {
-            printf("install_page: this god damn page has already been used.\n");
+        while (pagedir_get_page(thread_current()->pagedir, upage) != NULL) {
+            printf("install_page: this god damn page '%x' has already been used.\n", upage);
+            // upage += PGSIZE;
         }
         /* Load this page (to kernel page, and then copy from kernel page to user page). */
         if (file_read(file, kpage, page_read_bytes) != (int) page_read_bytes) {
             palloc_free_page(kpage);
-            printf("load_segment: file read failed\n");
             return false;
         }
         memset(kpage + page_read_bytes, 0, page_zero_bytes);
@@ -492,10 +488,10 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         /* Add the page to the process's address space. */
         if (!install_page(upage, kpage, writable)) {
             palloc_free_page(kpage);
-            printf("load_segment: install page failed for data at %d\n", upage);
+            printf("load_segment: install page failed for data at %x\n", upage);
             return false;
         } else {
-            printf("load_segment: install page successful at %d\n", upage);
+            printf("load_segment: install page successful at %x\n", upage);
         }
 
         /* Advance. */
@@ -503,7 +499,6 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         zero_bytes -= page_zero_bytes;
         upage += PGSIZE;
     }
-    printf("load_segment: loops all done\n");
     return true;
 }
 
@@ -538,6 +533,7 @@ void * push_arguments(struct arguments *args, void **esp) {
     *esp -= sizeof(int);
     memcpy(*esp, &(args->argc), sizeof(int));
     // push fake return address
+    *esp -= sizeof(void *);
     memcpy(*esp, &args->argv[args->argc], sizeof(void *));
     free(arg_ptr_list);
     return *esp;
@@ -555,7 +551,7 @@ setup_stack(void **esp, struct arguments *args) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
         if (success) {
             *esp = PHYS_BASE - 12; // prevent invalid use of memory
-            *esp = push_arguments(args, esp); // argument passing
+            // *esp = push_arguments(args, esp); // argument passing
         } else
             palloc_free_page(kpage);
     }
@@ -577,9 +573,6 @@ install_page(void *upage, void *kpage, bool writable) {
 
     /* Verify that there's not already a page at that virtual
        address, then map our page there. */
-    if (pagedir_get_page(t->pagedir, upage) != NULL) {
-        printf("install_page: this god damn page has already been used.\n");
-    }
     return (pagedir_get_page(t->pagedir, upage) == NULL
             && pagedir_set_page(t->pagedir, upage, kpage, writable));
 }
