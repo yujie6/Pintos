@@ -9,6 +9,7 @@
 #include "filesys/filesys.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "pagedir.h"
 
 static void syscall_handler(struct intr_frame *);
 
@@ -35,15 +36,22 @@ void check_stack(void * esp) {
  * in userprog/exception.c. This technique is normally faster because it takes advantage of the processor's
  * MMU, so it tends to be used in real kernels (including Linux).
  */
+    if (!is_valid_user_vaddr(esp)) {
+        syscall_exit(-1);
+    } else {
+        if (pagedir_get_page(thread_current()->pagedir, pg_round_down(esp + 1)) == NULL)
+            syscall_exit(-1);
+    }
+
 }
 
 static void
 syscall_handler(struct intr_frame *f UNUSED) {
     // uint32_t *esp = f->esp;
     uint32_t syscall_args[4];
-
-    int type = get_syscall_type(f);
     check_stack(f->esp);
+    int type = get_syscall_type(f);
+
     switch (type) {
         case SYS_HALT : {
             syscall_halt();
@@ -65,6 +73,10 @@ syscall_handler(struct intr_frame *f UNUSED) {
         }                   /* Wait for a child process to die. */
         case SYS_CREATE: {
             // printf("system call [create] !\n");
+            get_syscall_arg(f, syscall_args, 2);
+            const char * file = (char *)syscall_args[0];
+            unsigned int size = syscall_args[1];
+            syscall_create(file, size);
             break;
         }/* Create a file. */
         case SYS_REMOVE: {
@@ -73,6 +85,9 @@ syscall_handler(struct intr_frame *f UNUSED) {
         }/* Delete a file. */
         case SYS_OPEN: {
             // printf("system call [open]!\n");
+            get_syscall_arg(f, syscall_args, 1);
+            const char * file = (char *)syscall_args[0];
+            syscall_open(file);
             break;
         }/* Open a file. */
         case SYS_FILESIZE: {
@@ -107,6 +122,7 @@ syscall_handler(struct intr_frame *f UNUSED) {
         }
         default: {
             // printf("other system call...\n");
+            syscall_exit(-1);
             break;
         }
     }
@@ -116,8 +132,7 @@ static void
 validate_user_addr(const void *uaddr, unsigned int len) {
     for (const void *addr = uaddr; addr < uaddr + len; ++addr) {
         if ((!addr) || !(is_user_vaddr(addr))) {
-            thread_exit();
-            return;
+            syscall_exit(-1);
         }
     }
 }
@@ -125,12 +140,14 @@ validate_user_addr(const void *uaddr, unsigned int len) {
 static void
 get_syscall_arg(struct intr_frame *f, uint32_t *buffer, int argc) {
     for (int i = 0; i < argc; i++) {
+        validate_user_addr((uint32_t *) f->esp + i + 1, 4);
         *buffer = *((uint32_t *) f->esp + i + 1);
         buffer++;
     }
 }
 
 int get_syscall_type(struct intr_frame *f) {
+    // printf("stack pointer: %x\n", f->esp);
     validate_user_addr(f->esp, sizeof(uint32_t));
     return *((uint32_t *) f->esp);
 }
@@ -169,6 +186,22 @@ void syscall_exit (int status) {
 void syscall_halt(void) {
     shutdown_power_off();
     NOT_REACHED ();
+}
+
+bool syscall_remove (const char *file) {
+
+}
+bool syscall_create (const char *file, unsigned initial_size) {
+
+}
+int syscall_open (const char *file) {
+    lock_acquire(&filesystem_lock);
+    struct file * fp = filesys_open(file);
+    if (fp == NULL) {
+        lock_release(&filesystem_lock);
+        return -1;
+    }
+    
 }
 
 

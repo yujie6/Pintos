@@ -99,12 +99,16 @@ struct thread {
     fixed_point_t recent_cpu;
     int priority;                       /* Priority. */
     int original_priority;              /* Priority before donating */
+// #ifdef USERPROG
     int exit_status;                    /* exit code */
+    struct list file_descriptor_list;
+    struct list child_list;
+// #endif
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list lock_list;
     struct lock *lock_waiting;
-    struct list child_list;
+
     struct thread *parent;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

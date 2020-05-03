@@ -543,6 +543,7 @@ init_thread(struct thread *t, const char *name, int priority) {
     t->lock_waiting = NULL;
     list_init(&t->lock_list);
     list_init(&t->child_list);
+    list_init(&t->file_descriptor_list);
     t->magic = THREAD_MAGIC;
     if (thread_mlfqs) {
         t->nice = 0;
