@@ -99,6 +99,7 @@ struct thread {
     fixed_point_t recent_cpu;
     int priority;                       /* Priority. */
     int original_priority;              /* Priority before donating */
+    int exit_status;                    /* exit code */
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list lock_list;
