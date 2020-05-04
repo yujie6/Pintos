@@ -1,9 +1,17 @@
 #ifndef FILESYS_FILE_H
 #define FILESYS_FILE_H
 
+#include <lib/kernel/list.h>
 #include "filesys/off_t.h"
 
 struct inode;
+struct file_descriptor {
+    int fd;
+    struct thread * holder;
+    struct file * opened_file;
+    struct list_elem elem;
+    char * name;
+};
 
 /* Opening and closing files. */
 struct file *file_open (struct inode *);

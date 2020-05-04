@@ -6,10 +6,11 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#include <threads/malloc.h>
 
 /* Partition that contains the file system. */
 struct block *fs_device;
-
+struct file_descriptor;
 static void do_format(void);
 
 /* Initializes the file system module.

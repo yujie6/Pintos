@@ -194,7 +194,7 @@ thread_create(const char *name, int priority,
     if (thread_current() != NULL) {
         struct thread *parent = thread_current();
         t->parent = parent;
-        struct process_info * info_t = (struct process_info*) malloc (sizeof(struct process_info));
+        struct process_info *info_t = (struct process_info *) malloc(sizeof(struct process_info));
         info_t->is_waiting = false;
         info_t->has_exited = false;
         info_t->tid = tid;
@@ -385,22 +385,22 @@ thread_get_priority(void) {
 }
 
 int get_ready_list_size(void) {
-    return list_size(&ready_list) + ((thread_current() != idle_thread) ?  1 : 0);
+    return list_size(&ready_list) + ((thread_current() != idle_thread) ? 1 : 0);
 };
 
-void update_thread_recent_cpu(struct thread * t, void *aux) {
+void update_thread_recent_cpu(struct thread *t, void *aux) {
     fixed_point_t load_avg_2 = fix_mul(fix_int(2), global_load_avg);
     fixed_point_t tmp = fix_div(load_avg_2, fix_add(load_avg_2, fix_int(1)));
     t->recent_cpu = fix_add(fix_mul(t->recent_cpu, tmp), fix_int(t->nice));
 }
 
-void update_thread_priority_mlfqs(struct thread * t, void * aux) {
+void update_thread_priority_mlfqs(struct thread *t, void *aux) {
     ASSERT(thread_mlfqs);
     if (t == idle_thread) {
         return;
     }
     t->priority = PRI_MAX - fix_round(fix_div(t->recent_cpu, fix_int(4)))
-            - t->nice * 2;
+                  - t->nice * 2;
 }
 
 void update_all_priority(void) {
@@ -445,14 +445,14 @@ void update_load_avg(void) {
 int
 thread_get_load_avg(void) {
     // bool load_avg =d
-    return fix_round( fix_mul(fix_int(100), global_load_avg));
+    return fix_round(fix_mul(fix_int(100), global_load_avg));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu(void) {
     /* Not yet implemented. */
-    return fix_round(fix_mul(fix_int(100), thread_current()->recent_cpu) );
+    return fix_round(fix_mul(fix_int(100), thread_current()->recent_cpu));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.

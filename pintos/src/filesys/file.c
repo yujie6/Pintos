@@ -11,14 +11,6 @@ struct file {
     bool deny_write;            /* Has file_deny_write() been called? */
 };
 
-struct file_descriptor {
-    int fd;
-    struct thread * holder;
-    struct file * opened_file;
-    struct list_elem elem;
-    char name[16];
-};
-
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an
    allocation fails or if INODE is null. */

@@ -102,6 +102,7 @@ struct thread {
 // #ifdef USERPROG
     int exit_status;                    /* exit code */
     struct list file_descriptor_list;
+    bool fd_used[128];
     struct list child_list;
 // #endif
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
