@@ -85,6 +85,7 @@ struct process_info {
     bool is_waiting;
     bool has_exited;
     tid_t tid;
+    int exit_status;
     struct list_elem elem;
     struct thread * thread_;
 };
@@ -104,13 +105,13 @@ struct thread {
     struct list file_descriptor_list;
     bool fd_used[128];
     struct list child_list;
+    struct thread *parent;
 // #endif
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list lock_list;
     struct lock *lock_waiting;
 
-    struct thread *parent;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     /* Owned by userprog/process.c. */

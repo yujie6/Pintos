@@ -1,5 +1,6 @@
 #include <lib/stdbool.h>
 #include <threads/thread.h>
+#include <lib/user/syscall.h>
 
 #ifndef USERPROG_SYSCALL_H
 #define USERPROG_SYSCALL_H
@@ -18,5 +19,8 @@ bool syscall_create (const char *file, unsigned initial_size);
 int syscall_open (const char *file);
 void syscall_close(int fd);
 int syscall_filesize(int fd);
+pid_t syscall_exec (const char *file);
+int syscall_wait (pid_t pid);
+struct lock * get_fs_lock();
 
 #endif /* userprog/syscall.h */

@@ -199,7 +199,7 @@ thread_create(const char *name, int priority,
         info_t->has_exited = false;
         info_t->tid = tid;
         info_t->thread_ = t;
-        list_insert(parent->child_list.head.next, &info_t->elem);
+        list_push_back(&parent->child_list, &info_t->elem);
     }
 
     /* Stack frame for kernel_thread(). */

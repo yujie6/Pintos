@@ -11,6 +11,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "pagedir.h"
+#include "process.h"
 #include <string.h>
 
 static void syscall_handler(struct intr_frame *);
@@ -20,13 +21,16 @@ int get_syscall_type();
 static void get_syscall_arg(struct intr_frame *f, uint32_t *buffer, int argc);
 
 
-
 static struct lock filesystem_lock;
 
 void
 syscall_init(void) {
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
     lock_init(&filesystem_lock);
+}
+
+struct lock * get_fs_lock() {
+    return &filesystem_lock;
 }
 
 
@@ -77,10 +81,14 @@ syscall_handler(struct intr_frame *f UNUSED) {
         }/* Terminate this process. */
         case SYS_EXEC: {
             // printf("system call [exec] !\n");
+            get_syscall_arg(f, syscall_args, 1);
+            f->eax = syscall_exec((char *) syscall_args[0]);
             break;
         }/* Start another process. */
         case SYS_WAIT: {
             // printf("system call [wait] !\n");
+            get_syscall_arg(f, syscall_args, 1);
+            f->eax = syscall_wait(syscall_args[0]);
             break;
         }                   /* Wait for a child process to die. */
         case SYS_CREATE: {
@@ -351,6 +359,21 @@ int syscall_filesize(int fd) {
     int ans = file_length(fp);
     lock_release(&filesystem_lock);
     return ans;
+}
+
+pid_t syscall_exec (const char *file) {
+    check_file_addr(file);
+    /*
+     * Thus, the parent process cannot return from the exec until it knows whether the child
+     * process successfully loaded its executable. You must use appropriate
+     * synchronization to ensure this.
+     */
+    int tid = process_execute(file);
+    return tid;
+}
+
+int syscall_wait (pid_t pid) {
+    return process_wait(pid);
 }
 
 
