@@ -23,6 +23,7 @@
 #include "userprog/syscall.h"
 
 static thread_func start_process NO_RETURN;
+struct start_process_arg;
 
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
@@ -93,19 +94,25 @@ process_execute(const char *file_name) {
     }
 
     /* Create a new thread to execute FILE_NAME. */
-
-    tid = thread_create(name, PRI_DEFAULT + 1, start_process, fn_copy);
-    if (tid == TID_ERROR) {
-        palloc_free_page(fn_copy);
+    struct start_process_arg * arg = malloc(sizeof(struct start_process_arg));
+    arg->file_name = fn_copy;
+    sema_init(&arg->sema, 0);
+    tid = thread_create(name, PRI_DEFAULT + 1, start_process, arg);
+    sema_down(&arg->sema);  // wait the process to load file done
+    if (!arg->success) {
+        // printf("%s load fail\n", name);
+        return -1;
     }
+    free(arg);
     return tid;
 }
 
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process(void *file_name_) {
-    char *file_name = file_name_;
+start_process(void *arg) {
+    struct start_process_arg * p_arg = (struct start_process_arg *) arg;
+    char *file_name = p_arg->file_name;
     struct intr_frame if_;
     bool success;
 
@@ -120,7 +127,13 @@ start_process(void *file_name_) {
     /* If load failed, quit. */
     palloc_free_page(file_name);
     if (!success) {
-        syscall_exit(-1);
+        p_arg->success = false;
+        // printf("%s load fail\n", p_arg->file_name);
+        sema_up(&p_arg->sema);
+        thread_exit();
+    } else {
+        p_arg->success = true;
+        sema_up(&p_arg->sema);
     }
 
     /* Start the user process by simulating a return from an
@@ -195,6 +208,8 @@ process_exit(void) {
     uint32_t *pd;
     // kill children processes
     remove_all_children(cur);
+    if (cur->src_code != NULL)
+        file_allow_write(cur->src_code);
     struct list brother_list = cur->parent->child_list;
     struct process_info *info_t = get_child_process(cur->tid, brother_list);
     if (info_t != NULL) {
@@ -340,6 +355,7 @@ load(const char *file_name, void (**eip)(void), void **esp) {
         // syscall_exit(-1);
         goto done;
     }
+    file_deny_write(file);
 
     /* Read and verify executable header. */
     if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -354,7 +370,6 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 
     /* Read program headers. */
     file_ofs = ehdr.e_phoff;
-    // printf("Start of program headers: %d\n", file_ofs);
     for (i = 0; i < ehdr.e_phnum; i++) { // Number of program headers
         struct Elf32_Phdr phdr;
 
@@ -409,7 +424,6 @@ load(const char *file_name, void (**eip)(void), void **esp) {
                 break;
         }
     }
-
     /* Set up stack. */
     if (!setup_stack(esp, args)) {
         printf("load: %s: set up stack failed\n", args->argv[0]);
@@ -422,10 +436,10 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     *eip = (void (*)(void)) ehdr.e_entry;
     // printf("Program entry point: 0x%x\n" ,*eip);
     success = true;
-
+    t->src_code = file;
     done:
     /* We arrive here whether the load is successful or not. */
-    file_close(file);
+    // file_close(file);
     lock_release(get_fs_lock());
     return success;
 }

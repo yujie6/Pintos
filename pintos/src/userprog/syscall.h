@@ -21,6 +21,8 @@ void syscall_close(int fd);
 int syscall_filesize(int fd);
 pid_t syscall_exec (const char *file);
 int syscall_wait (pid_t pid);
+void syscall_seek (int fd, unsigned position);
+int syscall_tell (int fd);
 struct lock * get_fs_lock();
 
 #endif /* userprog/syscall.h */

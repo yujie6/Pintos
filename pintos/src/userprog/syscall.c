@@ -53,6 +53,7 @@ void check_stack(void * esp) {
 }
 
 void check_file_addr(const char * file) {
+    // printf("str addr: %x\n", file);
     const char *p = file;
     if (file == NULL) syscall_exit(-1);
     for (; validate_user_addr(p, 1), *p != '\0'; p++) {
@@ -65,9 +66,9 @@ static void
 syscall_handler(struct intr_frame *f UNUSED) {
     // uint32_t *esp = f->esp;
     uint32_t syscall_args[4];
+
     check_stack(f->esp);
     int type = get_syscall_type(f);
-
     switch (type) {
         case SYS_HALT : {
             syscall_halt();
@@ -141,10 +142,17 @@ syscall_handler(struct intr_frame *f UNUSED) {
         }
         case SYS_SEEK: {
             // printf("system call [seek]!\n");
+            get_syscall_arg(f, syscall_args, 2);
+            int fd = syscall_args[0];
+            int pos = syscall_args[1];
+            syscall_seek(fd, pos);
             break;
         }                   /* Change position in a file. */
         case SYS_TELL : {
             // printf("system call [tell]!\n");
+            get_syscall_arg(f, syscall_args, 1);
+            int fd = syscall_args[0];
+            f->eax = syscall_tell(fd);
             break;
         }                   /* Report current position in a file. */
         case SYS_CLOSE: {
@@ -168,7 +176,7 @@ validate_user_addr(const void *uaddr, unsigned int len) {
         if ((!addr) || !(is_valid_user_vaddr(addr))) {
             syscall_exit(-1);
         }
-        if (pagedir_get_page(thread_current()->pagedir, pg_round_down(uaddr)) == NULL) {
+        if (pagedir_get_page(thread_current()->pagedir, pg_round_down(addr)) == NULL) {
             syscall_exit(-1);
         }
     }
@@ -209,6 +217,7 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
                 lock_release(&filesystem_lock);
                 syscall_exit(-1);
             }
+
             int write_size = file_write(fd_ptr->opened_file, buffer, size);
             lock_release(&filesystem_lock);
             return write_size;
@@ -333,11 +342,13 @@ void syscall_close(int fd) {
 
     if (fd <= 1 || list_empty(&t->file_descriptor_list)) {
         // printf("This thread (%s) has no opened file\n", t->name);
+        lock_release(&filesystem_lock);
         syscall_exit(-1);
     }
     struct file_descriptor * fd_ptr = get_fd_ptr(t, fd);
     if (fd_ptr == NULL) {
         // printf("No such fd opened: %d\n", fd);
+        lock_release(&filesystem_lock);
         syscall_exit(-1);
     }
     file_close(fd_ptr->opened_file);
@@ -374,6 +385,31 @@ pid_t syscall_exec (const char *file) {
 
 int syscall_wait (pid_t pid) {
     return process_wait(pid);
+}
+
+void syscall_seek (int fd, unsigned position) {
+    lock_acquire(&filesystem_lock);
+    struct file_descriptor * fileDescriptor = get_fd_ptr(thread_current(), fd);
+    if (fileDescriptor == NULL) {
+        lock_release(&filesystem_lock);
+        syscall_exit(-1);
+    }
+    struct file * fp = fileDescriptor->opened_file;
+    file_seek(fp, position);
+    lock_release(&filesystem_lock);
+}
+
+int syscall_tell (int fd) {
+    lock_acquire(&filesystem_lock);
+    struct file_descriptor * fileDescriptor = get_fd_ptr(thread_current(), fd);
+    if (fileDescriptor == NULL) {
+        lock_release(&filesystem_lock);
+        syscall_exit(-1);
+    }
+    struct file * fp = fileDescriptor->opened_file;
+    int pos = file_tell(fp);
+    lock_release(&filesystem_lock);
+    return pos;
 }
 
 

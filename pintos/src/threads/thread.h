@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "fixed-point.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -106,6 +107,7 @@ struct thread {
     bool fd_used[128];
     struct list child_list;
     struct thread *parent;
+    struct file * src_code;
 // #endif
     int64_t ticks_blocked;              /* Ticks when the thread is blocked */
     struct list_elem allelem;           /* List element for all threads list. */
