@@ -53,7 +53,6 @@ void check_stack(void * esp) {
 }
 
 void check_file_addr(const char * file) {
-    // printf("str addr: %x\n", file);
     const char *p = file;
     if (file == NULL) syscall_exit(-1);
     for (; validate_user_addr(p, 1), *p != '\0'; p++) {
@@ -90,6 +89,7 @@ syscall_handler(struct intr_frame *f UNUSED) {
             // printf("system call [wait] !\n");
             get_syscall_arg(f, syscall_args, 1);
             f->eax = syscall_wait(syscall_args[0]);
+            // printf("wait now return %d\n", f->eax);
             break;
         }                   /* Wait for a child process to die. */
         case SYS_CREATE: {
@@ -163,7 +163,7 @@ syscall_handler(struct intr_frame *f UNUSED) {
             break;
         }
         default: {
-            // printf("other system call...\n");
+            printf("other system call...\n");
             syscall_exit(-1);
             break;
         }
@@ -247,6 +247,7 @@ int syscall_read (int fd, void *buffer, unsigned size) {
             }
             int read_size = file_read(fd_ptr->opened_file, buffer, size);
             lock_release(&filesystem_lock);
+            // printf("read on %d done normally without sys_exit\n ", fd);
             return read_size;
         }
     }
@@ -262,6 +263,7 @@ void syscall_exit (int status) {
         t->fd_used[fd_ptr->fd] = false;
         free(fd_ptr);
     }
+    // debug_backtrace();
     printf("%s: exit(%d)\n", thread_current()->name, status);
     thread_exit();
 }
@@ -288,7 +290,7 @@ bool syscall_create (const char *file, unsigned initial_size) {
 }
 
 int select_unused_fd(struct thread * t) {
-    for (int i = 3; i < 128; i++) {
+    for (int i = 3; i < 140; i++) {
         if (!t->fd_used[i]) {
             return i;
         }
@@ -312,6 +314,7 @@ int syscall_open (const char *file) {
     int fd = select_unused_fd(t);
 
     struct file_descriptor * fileDescriptor = malloc (sizeof(struct file_descriptor));
+    // printf("open new file, fd is %d\n", fd);
     fileDescriptor->fd = fd;
     fileDescriptor->holder = thread_current();
     fileDescriptor->name = (char *) file;
@@ -380,6 +383,7 @@ pid_t syscall_exec (const char *file) {
      * synchronization to ensure this.
      */
     int tid = process_execute(file);
+    // printf("exec %s \n", file);
     return tid;
 }
 

@@ -104,7 +104,7 @@ struct thread {
 // #ifdef USERPROG
     int exit_status;                    /* exit code */
     struct list file_descriptor_list;
-    bool fd_used[128];
+    bool fd_used[140];
     struct list child_list;
     struct thread *parent;
     struct file * src_code;

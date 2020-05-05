@@ -131,6 +131,7 @@ main (int argc, char *argv[])
          spawned at a certain depth. */
       if (n > EXPECTED_DEPTH_TO_PASS/2)
         {
+            msg("spawn new child, %d\n", n+1);
           child_pid = spawn_child (n + 1, CRASH);
           if (child_pid != -1)
             {

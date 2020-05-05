@@ -188,8 +188,9 @@ process_wait(tid_t child_tid UNUSED) {
     int exit_status = child->exit_status;
     list_remove(&child->elem);
     free(child);
+//    printf("waiting for child done, ret %d.\n", exit_status);
     return exit_status;
-    // printf("waiting for child done.\n\n");
+
 }
 
 void remove_all_children(struct thread *t) {
@@ -220,7 +221,6 @@ process_exit(void) {
             free(info_t);
         }
     }
-    // printf("child exit done\n\n");
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
     pd = cur->pagedir;
@@ -343,7 +343,6 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     struct arguments *args;
     args = parse_arguments(file_name); //split into arguments
     if (args == NULL) {
-        free(args);
         goto done;
     }
 
@@ -440,6 +439,8 @@ load(const char *file_name, void (**eip)(void), void **esp) {
     done:
     /* We arrive here whether the load is successful or not. */
     // file_close(file);
+    palloc_free_page(args->argv);
+    free(args);
     lock_release(get_fs_lock());
     return success;
 }
