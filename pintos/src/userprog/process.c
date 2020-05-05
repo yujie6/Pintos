@@ -183,12 +183,13 @@ process_wait(tid_t child_tid UNUSED) {
         return -1;
     child->is_waiting = true;
     while (!child->has_exited) {
+        // printf("waiting for god damn %d \n", child_tid);
         thread_yield();
     }
     int exit_status = child->exit_status;
     list_remove(&child->elem);
     free(child);
-//    printf("waiting for child done, ret %d.\n", exit_status);
+    printf("waiting by \"%d\" done, ret %d.\n", t->tid, exit_status);
     return exit_status;
 
 }
@@ -216,10 +217,10 @@ process_exit(void) {
     if (info_t != NULL) {
         info_t->exit_status = cur->exit_status;
         info_t->has_exited = true;
-        if (!info_t->is_waiting) {
-            list_remove(&info_t->elem);
-            free(info_t);
-        }
+//        if (!info_t->is_waiting) {
+//            list_remove(&info_t->elem);
+//            free(info_t);
+//        }
     }
     /* Destroy the current process's page directory and switch back
        to the kernel-only page directory. */
@@ -527,10 +528,6 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         if (kpage == NULL)
             return false;
 
-        while (pagedir_get_page(thread_current()->pagedir, upage) != NULL) {
-            // ("install_page: this god damn page '%x' has already been used.\n", upage);
-            // upage += PGSIZE;
-        }
         /* Load this page (to kernel page, and then copy from kernel page to user page). */
         if (file_read(file, kpage, page_read_bytes) != (int) page_read_bytes) {
             palloc_free_page(kpage);

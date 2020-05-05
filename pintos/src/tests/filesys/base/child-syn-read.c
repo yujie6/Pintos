@@ -38,7 +38,6 @@ main (int argc, const char *argv[])
       compare_bytes (&c, buf + i, 1, i, file_name);
     }
   close (fd);
-  printf("%d read done, exit normally\n", child_idx);
 
   return child_idx;
 }

@@ -264,6 +264,7 @@ void syscall_exit (int status) {
         free(fd_ptr);
     }
     // debug_backtrace();
+    printf("stupid child exit %d\n", t->tid);
     printf("%s: exit(%d)\n", thread_current()->name, status);
     thread_exit();
 }
@@ -314,7 +315,7 @@ int syscall_open (const char *file) {
     int fd = select_unused_fd(t);
 
     struct file_descriptor * fileDescriptor = malloc (sizeof(struct file_descriptor));
-    // printf("open new file, fd is %d\n", fd);
+    printf("open new file, fd is %d\n", fd);
     fileDescriptor->fd = fd;
     fileDescriptor->holder = thread_current();
     fileDescriptor->name = (char *) file;

@@ -39,6 +39,7 @@ spawn_child (int c, enum child_termination_mode mode)
   char child_cmd[128];
   snprintf (child_cmd, sizeof child_cmd,
             "%s %d %s", test_name, c, mode == CRASH ? "-k" : "");
+    printf("exec \"%s\"\n", child_cmd);
   return exec (child_cmd);
 }
 
@@ -131,13 +132,15 @@ main (int argc, char *argv[])
          spawned at a certain depth. */
       if (n > EXPECTED_DEPTH_TO_PASS/2)
         {
-            msg("spawn new child, %d\n", n+1);
+            // msg("spawn new child, %d\n", n+1);
           child_pid = spawn_child (n + 1, CRASH);
+            printf("wait begin for %d\n", child_pid);
           if (child_pid != -1)
             {
               if (wait (child_pid) != -1)
                 fail ("crashed child should return -1.");
             }
+          printf("wait done for %d\n", child_pid);
           /* If spawning this child failed, so should
              the next spawn_child below. */
         }
