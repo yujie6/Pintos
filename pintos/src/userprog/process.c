@@ -114,7 +114,7 @@ start_process(void *arg) {
     struct start_process_arg * p_arg = (struct start_process_arg *) arg;
     char *file_name = p_arg->file_name;
     struct intr_frame if_;
-    bool success;
+    bool success = false;
 
 
     /* Initialize interrupt frame and load executable. */
@@ -189,7 +189,7 @@ process_wait(tid_t child_tid UNUSED) {
     int exit_status = child->exit_status;
     list_remove(&child->elem);
     free(child);
-    printf("waiting by \"%d\" done, ret %d.\n", t->tid, exit_status);
+    // printf("waiting by \"%d\" done, ret %d.\n", t->tid, exit_status);
     return exit_status;
 
 }

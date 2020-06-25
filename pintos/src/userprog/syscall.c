@@ -162,6 +162,18 @@ syscall_handler(struct intr_frame *f UNUSED) {
             syscall_close(fd);
             break;
         }
+        case SYS_MMAP: {
+            get_syscall_arg(f, syscall_args, 2);
+            int fd = syscall_args[0];
+            void * addr = syscall_args[1];
+            f->eax = syscall_mmap(fd, addr);
+            break;
+        }
+        case SYS_MUNMAP: {
+            get_syscall_arg(f, syscall_args, 1);
+            syscall_munmap((mapid_t) syscall_args[0]);
+            break;
+        }
         default: {
             printf("other system call...\n");
             syscall_exit(-1);
@@ -264,7 +276,7 @@ void syscall_exit (int status) {
         free(fd_ptr);
     }
     // debug_backtrace();
-    printf("stupid child exit %d\n", t->tid);
+    // printf("stupid child exit %d\n", t->tid);
     printf("%s: exit(%d)\n", thread_current()->name, status);
     thread_exit();
 }
@@ -315,7 +327,7 @@ int syscall_open (const char *file) {
     int fd = select_unused_fd(t);
 
     struct file_descriptor * fileDescriptor = malloc (sizeof(struct file_descriptor));
-    printf("open new file, fd is %d\n", fd);
+    // printf("open new file, fd is %d\n", fd);
     fileDescriptor->fd = fd;
     fileDescriptor->holder = thread_current();
     fileDescriptor->name = (char *) file;
@@ -417,4 +429,12 @@ int syscall_tell (int fd) {
     return pos;
 }
 
+
+void syscall_munmap (mapid_t mapping) {
+
+}
+
+mapid_t syscall_mmap (int fd, void *addr) {
+    return 0;
+}
 

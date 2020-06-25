@@ -23,6 +23,8 @@ pid_t syscall_exec (const char *file);
 int syscall_wait (pid_t pid);
 void syscall_seek (int fd, unsigned position);
 int syscall_tell (int fd);
+mapid_t syscall_mmap (int fd, void *addr);
+void syscall_munmap (mapid_t mapping);
 struct lock * get_fs_lock();
 
 #endif /* userprog/syscall.h */
