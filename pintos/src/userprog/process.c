@@ -25,6 +25,8 @@
 static thread_func start_process NO_RETURN;
 struct start_process_arg;
 
+static bool ifvm = false;
+
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
 
 struct arguments {
@@ -599,15 +601,32 @@ setup_stack(void **esp, struct arguments *args) {
     // printf("setting up stack now\n");
     uint8_t *kpage;
     bool success = false;
-    kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+    
+    if (ifvm) {
+        kpage = get_frame(((uint8_t *) PHYS_BASE) - PGSIZE, PAL_USER | PAL_ZERO);
+    }
+    else {
+        kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+    }
+
     if (kpage != NULL) {
         success = install_page(((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
         if (success) {
             *esp = PHYS_BASE - 12; // prevent invalid use of memory
             *esp = push_arguments(args, esp); // argument passing
-        } else
-            palloc_free_page(kpage);
+            if (ifvm) {
+                set_pin_infoFalse(kpage);
+            }
+        } else{
+            if (ifvm) {
+                free_frame(kpage);
+            }
+            else {
+                palloc_free_page(kpage);
+            }
+        }    
     }
+    
     return success;
 }
 
