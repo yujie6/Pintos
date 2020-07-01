@@ -21,6 +21,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/syscall.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 struct start_process_arg;
@@ -614,16 +615,15 @@ setup_stack(void **esp, struct arguments *args) {
         if (success) {
             *esp = PHYS_BASE - 12; // prevent invalid use of memory
             *esp = push_arguments(args, esp); // argument passing
-            if (ifvm) {
-                set_pin_infoFalse(kpage);
-            }
+#ifdef VM
+            // set_pin_infoFalse(kpage);
+#endif
         } else{
-            if (ifvm) {
-                free_frame(kpage);
-            }
-            else {
-                palloc_free_page(kpage);
-            }
+#ifdef VM
+            free_frame(kpage);
+#else
+            palloc_free_page(kpage);
+#endif
         }    
     }
     

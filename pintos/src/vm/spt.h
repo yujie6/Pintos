@@ -3,6 +3,7 @@
 #ifndef SRC_SPT_H
 #define SRC_SPY_H
 
+#include <lib/kernel/hash.h>
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "swap.h"

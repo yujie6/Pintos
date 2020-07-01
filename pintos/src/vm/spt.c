@@ -172,7 +172,7 @@ bool spt_install_file(struct hash *spt, void *page, struct file *file, off_t off
 
 //use in process.c install_page
 bool spt_install_frame(struct hash *spt, void *upage, void *kpage) {
-    struct page_table_elem *t = page_find(spt, upage);
+    struct page_table_elem *t = find_page(spt, upage);
     if (t != NULL) {
         return false;
     }

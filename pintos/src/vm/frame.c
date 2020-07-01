@@ -4,6 +4,8 @@
 #include "spt.h"
 #include "swap.h"
 #include "userprog/pagedir.h"
+#include "threads/malloc.h"
+#include "list.h"
 
 
 // reconstruct
@@ -60,7 +62,7 @@ void * get_frame(void *page, enum palloc_flags flag) {
         t->thread_use = thread_current();
         t->pinned = true;
         hash_insert(&frame_table, &t->hash_elem);
-        list_push(&frame_clock_list, &t->list_elem);
+        list_push_back(&frame_clock_list, &t->list_elem);
         lock_release(&frame_table);
     }
 
