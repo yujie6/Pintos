@@ -1,9 +1,12 @@
+#include <threads/malloc.h>
 #include "spt.h"
 #include "frame.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "swap.h"
 #include "userprog/pagedir.h"
+#include "lib/kernel/hash.h"
+#include <string.h>
 
 
 static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED) {
@@ -145,7 +148,7 @@ bool spt_unmap(struct hash *spt, uint32_t *pagedir, void *upage, struct file *fi
         }
     }
 
-    hash_delet(spt, &e->hash_elem);
+    hash_delete(spt, &e->hash_elem);
     return true;
 }
 
