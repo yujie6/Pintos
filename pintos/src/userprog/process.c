@@ -358,7 +358,7 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 
     /* Allocate and activate page directory. */
 #ifdef VM
-    t->spt = spt_create();
+    t->spt = spt_init();
 #endif
     t->pagedir = pagedir_create();
 
