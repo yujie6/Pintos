@@ -26,7 +26,7 @@ static unsigned loops_per_tick;
 
 static intr_handler_func timer_interrupt;
 
-bool BOOT_COMPLETE;
+// bool BOOT_COMPLETE;
 
 static bool too_many_loops(unsigned loops);
 

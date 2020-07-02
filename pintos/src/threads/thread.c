@@ -18,8 +18,9 @@
 #include "userprog/process.h"
 #endif
 
+#ifdef VM
 #include "vm/spt.h"
-
+#endif
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -326,7 +327,9 @@ thread_exit(void) {
     intr_disable();
     list_remove(&thread_current()->allelem);
     thread_current()->status = THREAD_DYING;
+#ifdef VM
     spt_destroy(thread_current()->spt);
+#endif
     schedule();
     NOT_REACHED();
 }
@@ -548,7 +551,9 @@ init_thread(struct thread *t, const char *name, int priority) {
     list_init(&t->child_list);
     list_init(&t->file_descriptor_list);
     list_init(&t->mmap_list);
+#ifdef VM
     t->spt = spt_init();
+#endif
     t->magic = THREAD_MAGIC;
     if (thread_mlfqs) {
         t->nice = 0;
@@ -603,7 +608,7 @@ next_thread_to_run(void) {
 
    After this function and its caller returns, the thread switch
    is complete. */
-extern bool BOOT_COMPLETE;
+// extern bool BOOT_COMPLETE;
 
 void
 thread_schedule_tail(struct thread *prev) {
@@ -618,8 +623,8 @@ thread_schedule_tail(struct thread *prev) {
     thread_ticks = 0;
 
 #ifdef USERPROG
-    if (BOOT_COMPLETE)
-        process_activate();
+     //if (BOOT_COMPLETE)
+     process_activate();
 #endif
 
     /* If the thread we switched from is dying, destroy its struct

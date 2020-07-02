@@ -10,7 +10,9 @@
 #include "filesys/filesys.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#ifdef VM
 #include "vm/spt.h"
+#endif
 #include "pagedir.h"
 #include "process.h"
 #include <string.h>
@@ -429,8 +431,8 @@ int syscall_tell (int fd) {
     lock_release(&filesystem_lock);
     return pos;
 }
-
 struct mmap_info * get_mmap_info(int mapid) {
+#ifdef VM
     struct thread * cur = thread_current();
     if (!list_empty(&cur->mmap_list)) {
         struct list_elem * e;
@@ -442,11 +444,12 @@ struct mmap_info * get_mmap_info(int mapid) {
             }
         }
     }
+#endif
     return NULL;
 }
 
-
 void syscall_munmap (mapid_t mapping) {
+#ifdef VM
     struct mmap_info * info = get_mmap_info(mapping);
     if (info == NULL)
         return;
@@ -455,10 +458,12 @@ void syscall_munmap (mapid_t mapping) {
     // plus close opened file
     lock_acquire (&filesystem_lock);
     lock_release(&filesystem_lock);
+#endif
 }
 
 mapid_t syscall_mmap (int fd, void *addr) {
 
+#ifdef VM
     struct file_descriptor * fileDescriptor = get_fd_ptr(thread_current(), fd);
     void * original_addr = addr;
     if (fileDescriptor == NULL || !is_valid_user_vaddr(addr)) return -1;
@@ -495,6 +500,7 @@ mapid_t syscall_mmap (int fd, void *addr) {
     list_push_back(&cur->mmap_list, &info->elem);
 
     lock_release(&filesystem_lock);
+#endif
     return 0;
 }
 
