@@ -18,6 +18,8 @@
 #include "userprog/process.h"
 #endif
 
+#include "vm/spt.h"
+
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -324,6 +326,7 @@ thread_exit(void) {
     intr_disable();
     list_remove(&thread_current()->allelem);
     thread_current()->status = THREAD_DYING;
+    spt_destroy(thread_current()->spt);
     schedule();
     NOT_REACHED();
 }
@@ -544,6 +547,8 @@ init_thread(struct thread *t, const char *name, int priority) {
     list_init(&t->lock_list);
     list_init(&t->child_list);
     list_init(&t->file_descriptor_list);
+    list_init(&t->mmap_list);
+    t->spt = spt_init();
     t->magic = THREAD_MAGIC;
     if (thread_mlfqs) {
         t->nice = 0;
