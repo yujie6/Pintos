@@ -7,6 +7,7 @@
 
 
 #include <bitmap.h>
+#include <threads/synch.h>
 #include "threads/vaddr.h"
 #include "devices/block.h"
 
@@ -16,9 +17,6 @@ typedef uint32_t swap_index_t;
 
 static const size_t SECTORS_PER_PAGE = PGSIZE / BLOCK_SECTOR_SIZE;
 
-struct lock swap_lock;
-struct bitmap *swap_map;
-struct block *swap_block_device;
 
 void swap_init();
 

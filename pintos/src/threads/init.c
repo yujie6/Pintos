@@ -22,6 +22,9 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "vm/spt.h"
+#include "vm/frame.h"
+#include "vm/swap.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -110,6 +113,9 @@ pintos_init(void) {
     palloc_init(user_page_limit);
     malloc_init();
     paging_init();
+#ifdef VM
+    frame_init();
+#endif
 
     /* Segmentation. */
 #ifdef USERPROG
@@ -137,6 +143,10 @@ pintos_init(void) {
     ide_init ();
     locate_block_devices ();
     filesys_init (format_filesys);
+#endif
+
+#ifdef VM
+	swap_init ();
 #endif
 
     printf("Boot complete.\n");

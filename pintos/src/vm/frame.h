@@ -16,15 +16,9 @@ struct frame_item{
     bool pinned;
 };
 
-struct hash frame_table;
 
-struct lock frame_lock;
 
-//for clock algorithm
-struct list frame_clock_list;
-struct frame_item *frame_ptr;
-
-void frame_table_init();
+void frame_init();
 
 // get a frame, then in page talbe page->get_frame*
 void* get_frame(void *page, enum palloc_flags flag);
@@ -32,7 +26,7 @@ void* get_frame(void *page, enum palloc_flags flag);
 //free a frame
 void free_frame(void *frame);
 
-void *evict_frame(enum palloc_flags flag);
+void *frame_evict(enum palloc_flags flag, uint32_t *pagedir); 
 
 //get whether a frame can be swap
 bool get_pin_info(void *frame);

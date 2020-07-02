@@ -8,6 +8,9 @@
 #include "lib/kernel/hash.h"
 #include <string.h>
 
+static void spt_hash_clear(struct hash_elem *e, void *aux UNUSED);
+static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED);
+static bool spt_hash_less(const struct hash_elem *x, const struct hash_elem *y, void *aux UNUSED);
 
 static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED) {
     const struct page_table_item * t = hash_entry(e, struct page_table_item, hash_elem);

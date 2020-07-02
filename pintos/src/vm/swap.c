@@ -4,7 +4,13 @@
 
 #include "swap.h"
 
-void swap_inti() {
+
+
+static struct lock swap_lock;
+static struct bitmap *swap_map;
+static struct block *swap_block;
+
+void swap_init() {
     size_t swap_size;
     lock_init(&swap_lock);
     swap_block = block_get_role(BLOCK_SWAP);

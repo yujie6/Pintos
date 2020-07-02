@@ -114,6 +114,7 @@ struct thread {
     struct list lock_list;
     struct lock *lock_waiting;
 
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     /* Owned by userprog/process.c. */

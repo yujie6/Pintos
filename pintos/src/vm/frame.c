@@ -7,6 +7,14 @@
 #include "threads/malloc.h"
 #include "list.h"
 
+static struct hash frame_table;
+
+//for clock algorithm
+static struct list frame_clock_list;
+static struct lock frame_lock;
+
+
+static struct frame_item *frame_ptr;
 
 // reconstruct
 static bool frame_hash_less(const struct hash_elem *x, const struct hash_elem *y, void *aux UNUSED) {
@@ -46,7 +54,7 @@ void * get_frame(void *page, enum palloc_flags flag) {
     void *frame_addr = palloc_get_page(PAL_USER | flag);
 
     if (frame_addr == NULL) {
-        frame_addr = evict_frame(PAL_USER | flag);
+        frame_addr = frame_evict(PAL_USER | flag, thread_current()->pagedir);
     }
 
     if (frame_addr == NULL) {
@@ -63,7 +71,8 @@ void * get_frame(void *page, enum palloc_flags flag) {
         t->pinned = true;
         hash_insert(&frame_table, &t->hash_elem);
         list_push_back(&frame_clock_list, &t->list_elem);
-        lock_release(&frame_table);
+        printf("abcseldjif\n");
+        lock_release(&frame_lock);
     }
 
     return frame_addr;

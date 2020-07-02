@@ -1,7 +1,7 @@
 // created by wuhuaijin
 
 #ifndef SRC_SPT_H
-#define SRC_SPY_H
+#define SRC_SPT_H
 
 #include <lib/kernel/hash.h>
 #include "threads/thread.h"
@@ -42,9 +42,6 @@ struct page_table_item{
 struct hash * spt_create(void);
 // void spt_init(struct hash *spt);
 void spt_destroy(struct hash *spt);
-static void spt_hash_clear(struct hash_elem *e, void *aux UNUSED);
-static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED);
-static bool spt_hash_less(const struct hash_elem *x, const struct hash_elem *y, void *aux UNUSED);
 struct page_table_item * find_page(struct hash *spt, void *page);
 bool spt_has_item(struct hash *spt, void *page);
 bool spt_set_dirty(struct hash *spt, void *page, bool dirty);
