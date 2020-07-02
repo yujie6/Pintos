@@ -35,7 +35,7 @@ static void spt_hash_clear(struct hash_elem *e, void *aux UNUSED) {
 	free(t);
 }
 
-struct hash * spt_create(void) {
+struct hash * spt_init(void) {
     struct hash *spt = malloc(sizeof(struct hash));
     hash_init(spt, spt_hash, spt_hash_less, NULL);
     return spt;

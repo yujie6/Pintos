@@ -17,7 +17,7 @@ enum page_status {
 };
 
 
-struct page_table_item{
+struct page_table_item {
     enum page_status status;
     // virtural address of page;
     void *key; 
@@ -38,8 +38,17 @@ struct page_table_item{
     struct hash_elem hash_elem;
 };
 
+struct mmap_info {
+    // store mmap_id
+    struct list_elem elem;
+    int id;
+    struct file * file;
+    int size;
+    void * addr;
+};
 
-struct hash * spt_create(void);
+
+struct hash * spt_init(void);
 // void spt_init(struct hash *spt);
 void spt_destroy(struct hash *spt);
 struct page_table_item * find_page(struct hash *spt, void *page);

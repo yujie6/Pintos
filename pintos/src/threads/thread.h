@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <lib/kernel/hash.h>
 #include "fixed-point.h"
 #include "filesys/file.h"
 
@@ -122,6 +123,11 @@ struct thread {
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    // vm
+    struct hash * spt;
+    int mapid;
+    struct list mmap_list;
 };
 
 /* If false (default), use round-robin scheduler.

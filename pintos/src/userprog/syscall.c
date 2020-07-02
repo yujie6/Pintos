@@ -10,6 +10,7 @@
 #include "filesys/filesys.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "vm/spt.h"
 #include "pagedir.h"
 #include "process.h"
 #include <string.h>
@@ -429,12 +430,71 @@ int syscall_tell (int fd) {
     return pos;
 }
 
+struct mmap_info * get_mmap_info(int mapid) {
+    struct thread * cur = thread_current();
+    if (!list_empty(&cur->mmap_list)) {
+        struct list_elem * e;
+        for (e = list_begin(&cur->mmap_list); e != list_end(&cur->mmap_list);
+        e = list_next(e)) {
+            struct mmap_info * info = list_entry(e, struct mmap_info, elem);
+            if (info->id == mapid) {
+                return info;
+            }
+        }
+    }
+    return NULL;
+}
+
 
 void syscall_munmap (mapid_t mapping) {
+    struct mmap_info * info = get_mmap_info(mapping);
+    if (info == NULL)
+        return;
+    // iterate and unmap each page;
 
+    // plus close opened file
+    lock_acquire (&filesystem_lock);
+    lock_release(&filesystem_lock)
 }
 
 mapid_t syscall_mmap (int fd, void *addr) {
+
+    struct file_descriptor * fileDescriptor = get_fd_ptr(thread_current(), fd);
+    void * original_addr = addr;
+    if (fileDescriptor == NULL || !is_valid_user_vaddr(addr)) return -1;
+    int size = file_length(fileDescriptor->opened_file);
+    if ((uint32_t)addr % PGSIZE != 0 || size == 0) return -1;
+    lock_acquire(&filesystem_lock);
+    struct file * file = fileDescriptor->opened_file;
+    uint32_t read_bytes = size;
+    uint32_t zero_bytes = 0;
+    off_t ofs = 0;
+    struct thread * cur = thread_current();
+    // make sure all the page address is NON-EXIESENT.
+
+    while (read_bytes > 0) {
+        uint32_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+        uint32_t page_zero_bytes = PGSIZE - page_read_bytes;
+        spt_install_file(cur->spt, addr, file, ofs, read_bytes, zero_bytes);
+        read_bytes -= page_read_bytes;
+        zero_bytes -= page_zero_bytes;
+        ofs += page_read_bytes;
+        addr += PGSIZE;
+    }
+    mapid_t mapid;
+    if (!list_empty(&cur->mmap_list)) {
+        mapid = list_entry(list_back(&cur->mmap_list), struct mmap_info, elem)->id + 1;
+    } else {
+        mapid = 1;
+    }
+    struct mmap_info * info = malloc(sizeof(struct mmap_info));
+    info->file = file;
+    info->addr = original_addr;
+    info->size = size;
+    info->id = mapid;
+    list_push_back(&cur->mmap_list, &info->elem);
+
+    lock_release(&filesystem_lock);
     return 0;
 }
 
