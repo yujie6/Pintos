@@ -144,6 +144,36 @@ page_fault(struct intr_frame *f) {
     not_present = (f->error_code & PF_P) == 0;
     write = (f->error_code & PF_W) != 0;
     user = (f->error_code & PF_U) != 0;
+    
+#ifdef VM
+    //for stack growth
+    struct thread *cur = thread_current(); /* Current thread. */
+    void* fault_page = (void*) pg_round_down(fault_addr);
+
+    if (!not_present) {
+    // attempt to write to a read-only region is always killed.
+        goto ERROR;
+    }
+
+    void* esp = user ? f->esp : cur->stack;
+
+    // Stack Growth
+    bool on_stack_frame, is_stack_addr;
+    on_stack_frame = (esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32);
+    is_stack_addr = (PHYS_BASE - MAX_STACK_SIZE <= fault_addr && fault_addr < PHYS_BASE);
+    if (on_stack_frame && is_stack_addr) {
+        if (spt_has_item(cur->spt, fault_page) == false)
+        spt_install_zeropage(cur->spt, fault_page);
+    }
+
+    if(!load_page(cur->spt, cur->pagedir, fault_page)) {
+        goto ERROR;
+    }
+
+    return;
+
+ERROR:
+#endif
 
     /* To implement virtual memory, delete the rest of the function
        body, and replace it with code that brings in the page to
