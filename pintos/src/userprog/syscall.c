@@ -454,7 +454,7 @@ void syscall_munmap (mapid_t mapping) {
 
     // plus close opened file
     lock_acquire (&filesystem_lock);
-    lock_release(&filesystem_lock)
+    lock_release(&filesystem_lock);
 }
 
 mapid_t syscall_mmap (int fd, void *addr) {
@@ -475,7 +475,7 @@ mapid_t syscall_mmap (int fd, void *addr) {
     while (read_bytes > 0) {
         uint32_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
         uint32_t page_zero_bytes = PGSIZE - page_read_bytes;
-        spt_install_file(cur->spt, addr, file, ofs, read_bytes, zero_bytes);
+        spt_install_file(cur->spt, addr, file, ofs, read_bytes, zero_bytes, true);
         read_bytes -= page_read_bytes;
         zero_bytes -= page_zero_bytes;
         ofs += page_read_bytes;
