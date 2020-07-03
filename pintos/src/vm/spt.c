@@ -226,3 +226,26 @@ bool spt_set_swap(struct s_page_table *spt, void *page, swap_index_t swap_index)
     e->swap_index  = swap_index;
     return true;
 }
+
+
+void pin_page(struct s_page_table *spt, void *page) {
+  struct page_table_item *e;
+  e = find_page(spt, page);
+  if(e == NULL) {
+    return;
+  }
+
+//   ASSERT (spte->status == ON_FRAME);
+  set_pin_info (e->value, true);
+}
+
+void unpin_page(struct s_page_table *spt, void *page) {
+  struct page_table_item *e;
+  e = find_page(spt, page);
+  if(e == NULL) {
+    return;
+  }
+
+//   ASSERT (spte->status == ON_FRAME);
+  set_pin_info (e->value, false);
+}

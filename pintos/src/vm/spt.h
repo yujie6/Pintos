@@ -53,6 +53,8 @@ struct mmap_info {
 };
 
 
+void unpin_page(struct s_page_table *spt, void *page);
+void pin_page(struct s_page_table *spt, void *page);
 struct s_page_table * spt_init(void);
 // void spt_init(struct hash *spt);
 void spt_destroy(struct s_page_table *spt);

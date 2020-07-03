@@ -10,9 +10,10 @@
 #include "filesys/filesys.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-#ifdef VM
+// #ifdef VM
 #include "vm/spt.h"
-#endif
+#include "vm/frame.h"
+// #endif
 #include "pagedir.h"
 #include "process.h"
 #include <string.h>
@@ -240,9 +241,56 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
     }
 }
 
+static void check_user (const uint8_t *uaddr);
+
+static void
+check_user (const uint8_t *uaddr) {
+  // check uaddr range or segfaults
+  if (! ((void*)uaddr < PHYS_BASE)) {
+    syscall_exit(-1);
+  }
+}
+
+// static int32_t
+// get_user (const uint8_t *uaddr) {
+//   // check that a user pointer `uaddr` points below PHYS_BASE
+//   if (! ((void*)uaddr < PHYS_BASE)) {
+//     return -1;
+//   }
+
+//   // as suggested in the reference manual, see (3.1.5)
+//   int result;
+//   asm ("movl $1f, %0; movzbl %1, %0; 1:"
+//       : "=&a" (result) : "m" (*uaddr));
+//   return result;
+// }
+void load_and_pin(const void *buffer, size_t size);
+void load_and_pin(const void *buffer, size_t size) {
+  struct s_page_table *spt = thread_current()->spt;
+  uint32_t *pagedir = thread_current()->pagedir;
+
+  void *upage;
+  for(upage = pg_round_down(buffer); upage < buffer + size; upage += PGSIZE) {
+    load_page(spt, pagedir, upage);
+    pin_page (spt, upage);
+  }
+}
+void un_pin(const void *buffer, size_t size);
+void un_pin(const void *buffer, size_t size) {
+    struct s_page_table *spt = thread_current()->spt;
+
+    void *upage;
+    for(upage = pg_round_down(buffer); upage < buffer + size; upage += PGSIZE) {
+        unpin_page (spt, upage);
+    }
+}
+
 int syscall_read (int fd, void *buffer, unsigned size) {
+
+    check_user((const uint8_t*) buffer);
+    check_user((const uint8_t*) buffer + size - 1);
+
     lock_acquire(&filesystem_lock);
-    validate_user_addr(buffer, size);
     switch (fd) {
         case 0: //wirte to stdin, meaningless
             lock_release(&filesystem_lock);
@@ -260,7 +308,13 @@ int syscall_read (int fd, void *buffer, unsigned size) {
                 lock_release(&filesystem_lock);
                 syscall_exit(-1);
             }
+#ifdef VM
+            load_and_pin(buffer, size);
+#endif
             int read_size = file_read(fd_ptr->opened_file, buffer, size);
+#ifdef VM
+            un_pin(buffer, size);
+#endif            
             lock_release(&filesystem_lock);
             // printf("read on %d done normally without sys_exit\n ", fd);
             return read_size;
