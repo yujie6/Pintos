@@ -213,9 +213,22 @@ int get_syscall_type(struct intr_frame *f) {
     return *((uint32_t *) f->esp);
 }
 
+
+static void check_user (const uint8_t *uaddr);
+
+static void check_user (const uint8_t *uaddr) {
+  // check uaddr range or segfaults
+  if (! ((void*)uaddr < PHYS_BASE)) {
+    syscall_exit(-1);
+  }
+}
+
 int syscall_write(int fd, const void *buffer, unsigned size) {
+
+    check_user((const uint8_t*) buffer);
+    check_user((const uint8_t*) buffer + size - 1);
+
     lock_acquire(&filesystem_lock);
-    validate_user_addr(buffer, size);
     switch (fd) {
         case 0: //wirte to stdin, meaningless
             lock_release(&filesystem_lock);
@@ -233,22 +246,17 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
                 lock_release(&filesystem_lock);
                 syscall_exit(-1);
             }
-
+#ifdef VM
+            load_and_pin(buffer, size);
+#endif
             int write_size = file_write(fd_ptr->opened_file, buffer, size);
+#ifdef VM
+            un_pin(buffer, write_size);
+#endif
             lock_release(&filesystem_lock);
             return write_size;
         }
     }
-}
-
-static void check_user (const uint8_t *uaddr);
-
-static void
-check_user (const uint8_t *uaddr) {
-  // check uaddr range or segfaults
-  if (! ((void*)uaddr < PHYS_BASE)) {
-    syscall_exit(-1);
-  }
 }
 
 // static int32_t
