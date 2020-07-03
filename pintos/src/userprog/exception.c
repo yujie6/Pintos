@@ -164,6 +164,7 @@ page_fault(struct intr_frame *f) {
    void* fault_page = (void*) pg_round_down(fault_addr);
 
    if (!not_present) {
+      // printf(" not_ present error");
     // attempt to write to a read-only region is always killed.
       goto ERROR;
    }
@@ -175,11 +176,13 @@ page_fault(struct intr_frame *f) {
    on_stack_frame = (esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp - 32);
    is_stack_addr = (PHYS_BASE - MAX_STACK_SIZE <= fault_addr && fault_addr < PHYS_BASE);
    if (on_stack_frame && is_stack_addr) {
+      // printf(" no nonono");
       if (spt_has_item(cur->spt, fault_page) == false)
       spt_install_zeropage(cur->spt, fault_page);
    }
 
    if(!load_page(cur->spt, cur->pagedir, fault_page)) {
+      // printf(" fault_page error");
       goto ERROR;
    }
 

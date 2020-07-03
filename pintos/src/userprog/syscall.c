@@ -69,6 +69,7 @@ static void
 syscall_handler(struct intr_frame *f UNUSED) {
     // uint32_t *esp = f->esp;
     uint32_t syscall_args[4];
+    thread_current()->stack = f->esp;
 
     check_stack(f->esp);
     int type = get_syscall_type(f);
@@ -510,18 +511,67 @@ struct mmap_info * get_mmap_info(int mapid) {
     return NULL;
 }
 
-void syscall_munmap (mapid_t mapping) {
-#ifdef VM
+static void clear_mmap_entry(struct list_elem * e)  {
+    uint32_t * page_dir = thread_current()->pagedir;
+    lock_acquire(&filesystem_lock);
+    struct mmap_info * info = list_entry(e, struct mmap_info, elem);
+    // struct page_table_item * spe = 
+    spt_unmap(thread_current()->spt, thread_current()->pagedir, info->addr, info->file, 0, info->size);
+    list_remove(e);
+    lock_release(&filesystem_lock);
+}
+
+static void remove_mapid(struct list * mmap_list, int mapping) {
+
     struct mmap_info * info = get_mmap_info(mapping);
+    struct list_elem * e,  * next;
+    struct file * file_to_close = NULL;
     if (info == NULL)
         return;
     // iterate and unmap each page;
-
+    struct list * m_list = &thread_current()->mmap_list;
+    for (e = list_begin (m_list); e != list_end (m_list); e = next)
+    {
+        next = list_next(e);
+        struct mmap_info * info = list_entry(e, struct mmap_info, elem);
+        if (info->id = mapping) {
+            if (file_to_close == NULL) file_to_close = info->file;
+            clear_mmap_entry(e);
+            free(info);
+        }
+    }
     // plus close opened file
     lock_acquire (&filesystem_lock);
+    file_close(file_to_close);
     lock_release(&filesystem_lock);
+}
+
+static void mmap_clear(struct list * mmap_list) {
+    // used in process_exit to clear all mmapping
+    int r = thread_current()->mapid;
+    for (int i = 0; i < r; i++) {
+        remove_mapid(mmap_list, i);
+    }
+}
+
+void syscall_munmap (mapid_t mapping) {
+#ifdef VM
+    remove_mapid(&thread_current()->mmap_list, mapping);
 #endif
 }
+
+// void syscall_munmap (mapid_t mapping) {
+// #ifdef VM
+//     struct mmap_info * info = get_mmap_info(mapping);
+//     if (info == NULL)
+//         return;
+//     // iterate and unmap each page;
+
+//     // plus close opened file
+//     lock_acquire (&filesystem_lock);
+//     lock_release(&filesystem_lock);
+// #endif
+// }
 
 mapid_t syscall_mmap (int fd, void *addr) {
 

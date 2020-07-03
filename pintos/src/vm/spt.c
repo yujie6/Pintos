@@ -80,8 +80,10 @@ static bool load_page_from_filesys(struct page_table_item *e, void *kpage);
 
 bool load_page(struct s_page_table * spt, uint32_t *pagedir, void *upage) {
     struct page_table_item *e = find_page(spt, upage);
-    if (e == NULL) return false;
-
+    if (e == NULL) {
+        // printf("load_page fault1");
+        return false;
+    }
     if (e->status == FRAME) {
         return true; // already in frame, so don't need to load again
     }
@@ -89,7 +91,11 @@ bool load_page(struct s_page_table * spt, uint32_t *pagedir, void *upage) {
     void *frame = get_frame(upage, PAL_USER);
     // void *frame = vm_frame_allocate(PAL_USER, upage);
 
-    if (frame == NULL) return false;
+    if (frame == NULL) {
+        // printf("load_page fault2");
+        return false;
+        
+    }
     bool writable = true;
 
     if(e->status == ALL_ZERO) {
@@ -100,6 +106,7 @@ bool load_page(struct s_page_table * spt, uint32_t *pagedir, void *upage) {
     }
     else if (e->status == FILE) {
         if (!load_page_from_filesys(e, frame)) {
+            // printf("load_page fault3");
             free_frame(frame);
             // vm_frame_free(frame);
             return false;
@@ -108,6 +115,7 @@ bool load_page(struct s_page_table * spt, uint32_t *pagedir, void *upage) {
     }
 
     if (!pagedir_set_page(pagedir, upage, frame, writable)) {
+        // printf("load_page fault4");
         free_frame(frame);
         // vm_frame_free(frame);
         return false;
