@@ -26,7 +26,7 @@ void* get_frame(void *page, enum palloc_flags flag);
 //free a frame
 void free_frame(void *frame);
 
-void *frame_evict(enum palloc_flags flag, uint32_t *pagedir); 
+struct frame_item *frame_evict(uint32_t *pagedir); 
 
 //get whether a frame can be swap
 bool get_pin_info(void *frame);

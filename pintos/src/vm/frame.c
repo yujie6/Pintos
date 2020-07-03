@@ -12,11 +12,9 @@ static struct hash frame_table;
 //for clock algorithm
 static struct list frame_clock_list;
 static struct lock frame_lock;
+static struct list_elem *frame_ptr;
 
-
-static struct frame_item *frame_ptr;
-
-// reconstruct
+//reconstruct
 static bool frame_hash_less(const struct hash_elem *x, const struct hash_elem *y, void *aux UNUSED) {
     const struct frame_item * xx = hash_entry(x, struct frame_item, hash_elem);
     const struct frame_item * yy = hash_entry(y, struct frame_item, hash_elem);
@@ -29,7 +27,6 @@ static bool frame_hash(const struct hash_elem *x, void *aux UNUSED) {
     return hash_bytes(&xx->frame, sizeof(xx->frame));
 }
 
-
 //method
 void *find_frame(void *frame) {
     struct frame_item p;
@@ -40,6 +37,8 @@ void *find_frame(void *frame) {
     return hash_entry(q, struct frame_item, hash_elem);
 }
 
+static void free_frame_without_lock (void *kpage);
+
 void frame_init() {
     frame_ptr = NULL;
     lock_init(&frame_lock);
@@ -47,20 +46,34 @@ void frame_init() {
     list_init(&frame_clock_list);
 }
 
-void * get_frame(void *page, enum palloc_flags flag) {
 
-    lock_acquire(&frame_lock);
+void* get_frame (void *page, enum palloc_flags flags){
 
-    void *frame_addr = palloc_get_page(PAL_USER | flag);
+    lock_acquire (&frame_lock);
+
+    void *frame_addr = palloc_get_page (PAL_USER | flags);
 
     if (frame_addr == NULL) {
-        frame_addr = frame_evict(PAL_USER | flag, thread_current()->pagedir);
+        struct frame_item *frame_ptr_ = frame_evict( thread_current()->pagedir );
+
+        pagedir_clear_page(frame_ptr_->thread_use->pagedir, frame_ptr_->page);
+
+        bool is_dirty = false;
+        is_dirty= is_dirty || pagedir_is_dirty(frame_ptr_->thread_use->pagedir, frame_ptr_->page);
+        is_dirty = is_dirty || pagedir_is_dirty(frame_ptr_->thread_use->pagedir, frame_ptr_->frame);
+
+        swap_index_t swap_idx = swap_out( frame_ptr_->frame );
+        spt_set_swap(frame_ptr_->thread_use->spt, frame_ptr_->page, swap_idx);
+        spt_set_dirty(frame_ptr_->thread_use->spt, frame_ptr_->page, is_dirty);
+        free_frame_without_lock(frame_ptr_->frame);
+
+        frame_addr = palloc_get_page (PAL_USER | flags);
     }
 
     if (frame_addr == NULL) {
         PANIC ("no frame");
         lock_release(&frame_lock);
-        return frame_addr;
+        return NULL;
     } 
 
     if (frame_addr != NULL) {
@@ -76,7 +89,6 @@ void * get_frame(void *page, enum palloc_flags flag) {
     }
 
     return frame_addr;
-
 }
 
 void free_frame(void *frame) {
@@ -93,53 +105,49 @@ void free_frame(void *frame) {
         lock_release (&frame_lock);
     }
     else {
+        lock_release (&frame_lock);
         PANIC ("frame not exist");
     }
 
 }
 
-//clock algorithm
+void free_frame_without_lock(void *frame) {
+    struct frame_item *t = find_frame(frame);
 
-void clock_frame_next(void);
+    if (t != NULL) {
+        hash_delete(&frame_table, &t->hash_elem);
+        list_remove(&t->list_elem);
+        palloc_free_page (frame);
+        free(t);
+    }
+    else {
+        PANIC ("frame not exist");
+    }
+}
 
-void *frame_evict(enum palloc_flags flag, uint32_t *pagedir) {
+struct frame_item* clock_frame_next(void);
+struct frame_item* frame_evict( uint32_t *pagedir ){
     size_t n = hash_size(&frame_table);
 
-    for (size_t i = 0; i <= 2*n; ++i) {
-        clock_frame_next();
-        if (frame_ptr->pinned) continue;
-
-        if (pagedir_is_accessed(pagedir, frame_ptr->frame)) {
-            pagedir_set_accessed(pagedir, frame_ptr->frame, false);
+    for(size_t i = 0; i <= 2*n; ++i){
+        struct frame_item *e = clock_frame_next();
+        if(e->pinned) continue;
+        else if( pagedir_is_accessed(pagedir, e->page)) {
+            pagedir_set_accessed(pagedir, e->page, false);
             continue;
         }
-
-        pagedir_clear_page(frame_ptr->thread_use->pagedir, frame_ptr->frame);
-
-        bool is_dirty = false;
-        is_dirty = is_dirty || pagedir_is_dirty(frame_ptr->thread_use->pagedir, frame_ptr->frame);
-        is_dirty = is_dirty || pagedir_is_dirty(frame_ptr->thread_use->pagedir, frame_ptr->page);
-
-        swap_index_t swap_idx = swap_out(frame_ptr->page);
-        spt_set_swap(frame_ptr->thread_use->pagedir, frame_ptr->frame, swap_idx);
-        spt_set_dirty(frame_ptr->thread_use->pagedir, frame_ptr->frame, is_dirty);
-        free_frame(frame_ptr->page); // f_evicted is also invalidated
-
-        return palloc_get_page (flag);
+        return e;
     }
     PANIC ("no space");
 }
-
-void clock_frame_next(void) {
-    if (list_size(&frame_clock_list) == 1)
-        return;
-    if (&frame_ptr->list_elem == list_back(&frame_clock_list) || frame_ptr == NULL)
-        frame_ptr = list_entry(list_head(&frame_clock_list), struct frame_item, list_elem);
-    frame_ptr = list_entry(list_next(&frame_clock_list), struct frame_item, list_elem);                            
+struct frame_item* clock_frame_next(void){
+    if (frame_ptr == NULL || frame_ptr == list_end(&frame_clock_list))
+        frame_ptr = list_begin (&frame_clock_list);
+    else
+        frame_ptr = list_next (frame_ptr);
+    struct frame_item *e = list_entry(frame_ptr, struct frame_item, list_elem);
+    return e;
 }
-
-
-
 
 bool get_pin_info(void *frame) {
     struct frame_item *t = find_frame(frame);
