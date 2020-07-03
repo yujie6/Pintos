@@ -8,6 +8,10 @@
 #include "fixed-point.h"
 #include "filesys/file.h"
 
+#ifdef VM
+#include "vm/spt.h"
+#endif
+
 /* States in a thread's life cycle. */
 enum thread_status {
     THREAD_RUNNING,     /* Running thread. */
@@ -124,10 +128,12 @@ struct thread {
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-    // vm
-    struct hash * spt;
-    int mapid;
-    struct list mmap_list;
+#ifdef VM
+   struct s_page_table *spt;
+   struct list mmap_list;
+   int mapid;
+#endif
+
 };
 
 /* If false (default), use round-robin scheduler.
@@ -201,3 +207,5 @@ void thread_remove_lock(struct lock* lock);
 void thread_hold_the_lock(struct lock *lock);
 
 #endif /* threads/thread.h */
+
+

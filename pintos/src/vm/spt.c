@@ -13,7 +13,7 @@ static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED);
 static bool spt_hash_less(const struct hash_elem *x, const struct hash_elem *y, void *aux UNUSED);
 
 static unsigned spt_hash(const struct hash_elem *e, void *aux UNUSED) {
-    const struct page_table_item * t = hash_entry(e, struct page_table_item, hash_elem);
+    struct page_table_item * t = hash_entry(e, struct page_table_item, hash_elem);
 	return hash_int( (int)t->key);
 }
 
@@ -28,6 +28,7 @@ static void spt_hash_clear(struct hash_elem *e, void *aux UNUSED) {
     if(t->status == FRAME) {
 	    pagedir_clear_page(thread_current()->pagedir, t->key);
 	    free_frame(t->value);
+        // vm_frame_free(t->value);
 	}
     else if (t->status == SWAP) {
         swap_free(t->swap_index);
@@ -35,22 +36,24 @@ static void spt_hash_clear(struct hash_elem *e, void *aux UNUSED) {
 	free(t);
 }
 
-struct hash * spt_init(void) {
-    struct hash *spt = malloc(sizeof(struct hash));
-    hash_init(spt, spt_hash, spt_hash_less, NULL);
+struct s_page_table* spt_init(void) {
+    struct s_page_table *spt = (struct s_page_table *) malloc(sizeof(struct s_page_table));
+    //printf("malloc ok");
+    hash_init(&spt->page_map, spt_hash, spt_hash_less, NULL);
     return spt;
 }
 
 
-void spt_destroy(struct hash *spt) {
-    hash_destroy (spt, spt_hash_clear);
+void spt_destroy(struct s_page_table *spt) {
+    hash_destroy (&spt->page_map, spt_hash_clear);
+    free(spt);
 }
 
-struct page_table_item * find_page(struct hash *spt, void *page) {
+struct page_table_item * find_page(struct s_page_table *spt, void *page) {
     struct hash_elem *e;
 	struct page_table_item tmp;
 	tmp.key = page;
-	e = hash_find(spt, &(tmp.hash_elem));
+	e = hash_find(&spt->page_map, &(tmp.hash_elem));
 
 	if(e != NULL) {
 		return hash_entry(e, struct page_table_item, hash_elem);
@@ -60,20 +63,22 @@ struct page_table_item * find_page(struct hash *spt, void *page) {
 	}
 }
 
-bool spt_has_item(struct hash *spt, void *page) {
+bool spt_has_item(struct s_page_table *spt, void *page) {
     struct page_table_item *e = find_page(spt, page);
     if (e == NULL) return false;
     return true;
 }
 
-bool spt_set_dirty(struct hash *spt, void *page, bool dirty) {
+bool spt_set_dirty(struct s_page_table *spt, void *page, bool dirty) {
     struct page_table_item *e = find_page(spt, page);
     if (e == NULL) PANIC("page not exist when set dirty");
     e->dirty = e->dirty || dirty;
     return true;
 }
 
-bool load_page(struct hash *spt, uint32_t *pagedir, void *upage) {
+static bool load_page_from_filesys(struct page_table_item *e, void *kpage);
+
+bool load_page(struct s_page_table * spt, uint32_t *pagedir, void *upage) {
     struct page_table_item *e = find_page(spt, upage);
     if (e == NULL) return false;
 
@@ -82,9 +87,10 @@ bool load_page(struct hash *spt, uint32_t *pagedir, void *upage) {
     }
 
     void *frame = get_frame(upage, PAL_USER);
+    // void *frame = vm_frame_allocate(PAL_USER, upage);
 
     if (frame == NULL) return false;
-    bool writable = false;
+    bool writable = true;
 
     if(e->status == ALL_ZERO) {
         memset(frame, 0, PGSIZE);
@@ -93,19 +99,17 @@ bool load_page(struct hash *spt, uint32_t *pagedir, void *upage) {
         swap_in(e->swap_index, frame);
     }
     else if (e->status == FILE) {
-        file_seek(e->file, e->file_off);
-        int n_read = file_read(e->file, upage, e->read_bytes);
-        if (n_read != e->read_bytes) {
+        if (!load_page_from_filesys(e, frame)) {
             free_frame(frame);
+            // vm_frame_free(frame);
             return false;
         }
-        ASSERT(e->read_bytes + e->zero_bytes == PGSIZE);
-        memset(upage + n_read, 0, e->zero_bytes);
         writable = e->writable;
     }
 
     if (!pagedir_set_page(pagedir, upage, frame, writable)) {
         free_frame(frame);
+        // vm_frame_free(frame);
         return false;
     }
 
@@ -115,16 +119,29 @@ bool load_page(struct hash *spt, uint32_t *pagedir, void *upage) {
     pagedir_set_dirty(pagedir, frame, false);
 
     set_pin_info(frame, false);
+    // vm_frame_unpin(frame);
 
     return true;
 }
 
-bool spt_unmap(struct hash *spt, uint32_t *pagedir, void *upage, struct file *file, off_t offset, size_t bytes) {
+
+static bool load_page_from_filesys(struct page_table_item *e, void *kpage){
+    file_seek (e->file, e->file_off);
+
+    int n_read = file_read (e->file, kpage, e->read_bytes);
+    if(n_read != (int)e->read_bytes)
+        return false;
+    memset (kpage + n_read, 0, e->zero_bytes);
+    return true;
+}
+
+bool spt_unmap(struct s_page_table *spt, uint32_t *pagedir, void *upage, struct file *file, off_t offset, size_t bytes) {
     struct page_table_item *e = find_page(spt, upage);
     if (e == NULL) PANIC("page not exist when unmap");
 
     if (e->status == FRAME) {
         set_pin_info(e->value, true);
+        // vm_frame_pin(e->value);
     }
 
     if (e->status == FRAME) {
@@ -135,6 +152,7 @@ bool spt_unmap(struct hash *spt, uint32_t *pagedir, void *upage, struct file *fi
             file_write_at (file, e->key, bytes, offset);
         }
         free_frame(e->value);
+        // vm_frame_free(e->value);
         pagedir_clear_page(pagedir, e->key);
     }
     else if (e->status == SWAP) {
@@ -151,12 +169,12 @@ bool spt_unmap(struct hash *spt, uint32_t *pagedir, void *upage, struct file *fi
         }
     }
 
-    hash_delete(spt, &e->hash_elem);
+    hash_delete(&spt->page_map, &e->hash_elem);
     return true;
 }
 
 
-bool spt_install_file(struct hash *spt, void *page, struct file *file, off_t offset,
+bool spt_install_file(struct s_page_table *spt, void *page, struct file *file, off_t offset,
                         uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
 
     struct page_table_item *e = malloc(sizeof(struct page_table_item));
@@ -174,12 +192,12 @@ bool spt_install_file(struct hash *spt, void *page, struct file *file, off_t off
 }
 
 //use in process.c install_page
-bool spt_install_frame(struct hash *spt, void *upage, void *kpage) {
+bool spt_install_frame(struct s_page_table *spt, void *upage, void *kpage) {
     struct page_table_elem *t = find_page(spt, upage);
     if (t != NULL) {
         return false;
     }
-    struct page_table_item *e = malloc(sizeof(struct page_table_item));
+    struct page_table_item *e = (struct page_table_item *) malloc(sizeof(struct page_table_item));
     e->key = upage;
     e->value = kpage;
     e->status = FRAME;
@@ -190,7 +208,7 @@ bool spt_install_frame(struct hash *spt, void *upage, void *kpage) {
 }
 
 //use in exception.c page_fault
-bool spt_install_zeropage(struct hash *spt, void *page) {
+bool spt_install_zeropage(struct s_page_table *spt, void *page) {
     struct page_table_item *e = malloc(sizeof(struct page_table_item));
     e->key = page;
     e->status = ALL_ZERO;
@@ -200,7 +218,7 @@ bool spt_install_zeropage(struct hash *spt, void *page) {
     return hash_insert(spt, &e->hash_elem) == NULL;
 }
 
-bool spt_set_swap(struct hash *spt, void *page, swap_index_t swap_index) {
+bool spt_set_swap(struct s_page_table *spt, void *page, swap_index_t swap_index) {
     struct page_table_item *e = find_page(spt, page);
     if (e == NULL)  return false;
     e->status = SWAP;

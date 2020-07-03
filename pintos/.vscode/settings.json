@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "ios": "c",
+        "thread": "c",
+        "spt.h": "c",
+        "syscall.h": "c"
+    }
+}

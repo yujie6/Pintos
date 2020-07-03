@@ -327,9 +327,6 @@ thread_exit(void) {
     intr_disable();
     list_remove(&thread_current()->allelem);
     thread_current()->status = THREAD_DYING;
-#ifdef VM
-    spt_destroy(thread_current()->spt);
-#endif
     schedule();
     NOT_REACHED();
 }
@@ -550,9 +547,11 @@ init_thread(struct thread *t, const char *name, int priority) {
     list_init(&t->lock_list);
     list_init(&t->child_list);
     list_init(&t->file_descriptor_list);
-    list_init(&t->mmap_list);
+// #ifdef VM
+//     t->spt = spt_init();
+// #endif
 #ifdef VM
-    t->spt = spt_init();
+    list_init(&t->mmap_list);
 #endif
     t->magic = THREAD_MAGIC;
     if (thread_mlfqs) {

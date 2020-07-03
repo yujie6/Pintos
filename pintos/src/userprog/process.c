@@ -27,14 +27,6 @@
 
 
 
-
-
-
-
-
-
-
-
 static thread_func start_process NO_RETURN;
 struct start_process_arg;
 
@@ -360,6 +352,7 @@ load(const char *file_name, void (**eip)(void), void **esp) {
 #ifdef VM
     t->spt = spt_init();
 #endif
+
     t->pagedir = pagedir_create();
 
     if (t->pagedir == NULL)
@@ -555,7 +548,6 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
         return false;
         }
 #else
-
         /* Get a page of memory. */
         uint8_t *kpage = palloc_get_page(PAL_USER);
         if (kpage == NULL)
@@ -633,7 +625,7 @@ void *push_arguments(struct arguments *args, void **esp) {
    user virtual memory. */
 static bool
 setup_stack(void **esp, struct arguments *args) {
-    // printf("setting up stack now\n");
+//     // printf("setting up stack now\n");
     uint8_t *kpage;
     bool success = false;
 

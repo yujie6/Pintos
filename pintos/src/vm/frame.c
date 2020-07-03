@@ -71,7 +71,7 @@ void * get_frame(void *page, enum palloc_flags flag) {
         t->pinned = true;
         hash_insert(&frame_table, &t->hash_elem);
         list_push_back(&frame_clock_list, &t->list_elem);
-        printf("abcseldjif\n");
+        // printf("abcseldjif\n");
         lock_release(&frame_lock);
     }
 

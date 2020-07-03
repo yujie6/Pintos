@@ -17,6 +17,11 @@ enum page_status {
 };
 
 
+struct s_page_table {
+    struct hash page_map;
+};
+
+
 struct page_table_item {
     enum page_status status;
     // virtural address of page;
@@ -48,21 +53,21 @@ struct mmap_info {
 };
 
 
-struct hash * spt_init(void);
+struct s_page_table * spt_init(void);
 // void spt_init(struct hash *spt);
-void spt_destroy(struct hash *spt);
-struct page_table_item * find_page(struct hash *spt, void *page);
-bool spt_has_item(struct hash *spt, void *page);
-bool spt_set_dirty(struct hash *spt, void *page, bool dirty);
-bool load_page(struct hash *spt, uint32_t *pagedir, void *upage);
+void spt_destroy(struct s_page_table *spt);
+struct page_table_item * find_page(struct s_page_table *spt, void *page);
+bool spt_has_item(struct s_page_table *spt, void *page);
+bool spt_set_dirty(struct s_page_table *spt, void *page, bool dirty);
+bool load_page(struct s_page_table *spt, uint32_t *pagedir, void *upage);
 
-bool spt_unmap(struct hash *spt, uint32_t *pagedir, void *upage, struct file *file, off_t offset, size_t bytes);
+bool spt_unmap(struct s_page_table *spt, uint32_t *pagedir, void *upage, struct file *file, off_t offset, size_t bytes);
 
 
-bool spt_install_frame(struct hash *spt, void *upage, void *kpage);
-bool spt_install_zeropage(struct hash *spt, void *page);
-bool spt_set_swap(struct hash *spt, void *page, swap_index_t swap_index);
-bool spt_install_file(struct hash *spt, void *page, struct file *file, off_t offset,
+bool spt_install_frame(struct s_page_table *spt, void *upage, void *kpage);
+bool spt_install_zeropage(struct s_page_table *spt, void *page);
+bool spt_set_swap(struct s_page_table *spt, void *page, swap_index_t swap_index);
+bool spt_install_file(struct s_page_table *spt, void *page, struct file *file, off_t offset,
                         uint32_t read_bytes, uint32_t zero_bytes, bool writable);
 
 
