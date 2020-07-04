@@ -1,0 +1,24 @@
+squish-pty bochs -q
+Pintos hda1
+Loading.............
+Kernel command line: -q -f run multi-oom
+Pintos booting with 4,096 kB RAM...
+383 pages available in kernel pool.
+383 pages available in user pool.
+Calibrating timer...  204,600 loops/s.
+hda: 5,040 sectors (2 MB), model "BXHD00011", serial "Generic 1234"
+hda1: 219 sectors (109 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hda2
+Formatting file system...done.
+Boot complete.
+Executing 'multi-oom':
+load: multi-oom: open failed
+Execution of 'multi-oom' complete.
+Timer: 152 ticks
+Thread: 30 idle ticks, 103 kernel ticks, 22 user ticks
+hda2 (filesys): 20 reads, 6 writes
+Console: 616 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

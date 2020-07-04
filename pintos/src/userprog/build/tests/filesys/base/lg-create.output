@@ -1,0 +1,37 @@
+Copying tests/filesys/base/lg-create to scratch partition...
+squish-pty bochs -q
+Pintos hda1
+Loading.............
+Kernel command line: -q -f extract run lg-create
+Pintos booting with 4,096 kB RAM...
+383 pages available in kernel pool.
+383 pages available in user pool.
+Calibrating timer...  204,600 loops/s.
+hda: 5,040 sectors (2 MB), model "BXHD00011", serial "Generic 1234"
+hda1: 219 sectors (109 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 118 sectors (59 kB), Pintos scratch (22)
+filesys: using hda2
+scratch: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'lg-create' into the file system...
+Erasing ustar archive...
+Executing 'lg-create':
+(lg-create) begin
+(lg-create) create "blargle"
+(lg-create) open "blargle" for verification
+(lg-create) verified contents of "blargle"
+(lg-create) close "blargle"
+(lg-create) end
+lg-create: exit(0)
+Execution of 'lg-create' complete.
+Timer: 576 ticks
+Thread: 30 idle ticks, 272 kernel ticks, 277 user ticks
+hda2 (filesys): 232 reads, 392 writes
+hda3 (scratch): 117 reads, 2 writes
+Console: 1033 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

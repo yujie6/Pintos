@@ -1,0 +1,49 @@
+Copying tests/vm/page-merge-mm to scratch partition...
+Copying tests/vm/child-qsort-mm to scratch partition...
+squish-pty bochs -q
+Pintos hda1
+Loading...............
+Kernel command line: -q -f extract run page-merge-mm
+Pintos booting with 4,096 kB RAM...
+383 pages available in kernel pool.
+383 pages available in user pool.
+Calibrating timer...  204,600 loops/s.
+hda: 13,104 sectors (6 MB), model "BXHD00011", serial "Generic 1234"
+hda1: 241 sectors (120 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 250 sectors (125 kB), Pintos scratch (22)
+hda4: 8,192 sectors (4 MB), Pintos swap (23)
+filesys: using hda2
+scratch: using hda3
+swap: using hda4
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'page-merge-mm' into the file system...
+Putting 'child-qsort-mm' into the file system...
+Erasing ustar archive...
+Executing 'page-merge-mm':
+(page-merge-mm) begin
+(page-merge-mm) init
+(page-merge-mm) sort chunk 0
+(page-merge-mm) sort chunk 1
+(page-merge-mm) sort chunk 2
+(page-merge-mm) sort chunk 3
+child-qsort-mm: exit(-1)
+(page-merge-mm) sort chunk 4
+(page-merge-mm) sort chunk 5
+child-qsort-mm: exit(-1)
+User process ABORT at ../../tests/vm/qsort.c:80 in partition(): ô…ð¹wassertion `Äs1KÐ¬ŒDì/€Ë BL7fœå“Ø2µ¯Ë|‰8Luy¸*–~®èîœ""Ž…6zŠ8F˜å”l:ôÚ
+‡ûgé»wRµy	à=]AŒKðTå°	±á½ižfÓ÷u,­'Ì{çã·.ßyB‘Ð£UÝñˆv¶9äZ¤ÞË>ÑHpµ-@eÄ>Ÿ¨Ýt<rŽ©§MQ5´ËÒL„c•ÎíY³©:Ge':³î/r\·eNBÉ=°8áŸk›‰SÏ' failed.
+ÅœjH.ãÝœŽ™k z8<<no %Ä conversion>>s1KÐ¬ŒDì/€Ë BL7fœå“Ø2µ¯Ë|‰8Luy¸*–~®èîœ""Ž…6zŠ8F˜å”l:ôÚ
+‡ûgé»wRµy	à=]AŒKðTå°	±á½ižfÓ÷u,­'Ì{çã·.ßyB‘Ð£UÝñˆv¶9äZ¤ÞË>ÑHpµ-@eÄ>Ÿ¨Ýt<rŽ©§MQ5´ËÒL„c•ÎíY³©:Ge':³î/r\·eNBÉ=°8áŸk›‰SÏ™k z8<<no %Ä conversion>>s1KÐ¬ŒDì/€Ë BL7fœå“Ø2µ¯Ë|‰8Luy¸*–~®èîœ""Ž…6zŠ8F˜å”l:ôÚ
+‡ûgé»wRµy	à=]AŒKðTå°	±á½ižfÓ÷u,­'Ì{çã·.ßyB‘Ð£UÝñˆv¶9äZ¤ÞË>ÑHpµ-@eÄ>Ÿ¨Ýt<rŽ©§MQ5´ËÒL„c•ÎíY³©:Ge':³î/r\·eNBÉ=°8áŸk›‰SÏchild-qsort-mm: exit(-1)
+child-qsort-mm: exit(-1)
+User process ABORT at ../../tests/vm/qsort.c:80 in partition(): assertion `is_partitioned (array, size, pivot, left_size)' failed.
+Call stack: 0x804a2f3.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+child-qsort-mm: exit(1)
+(page-merge-mm) sort chunk 6
+Simulation terminated due to user process abort.
