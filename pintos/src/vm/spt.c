@@ -177,6 +177,7 @@ bool spt_unmap(struct s_page_table *spt, uint32_t *pagedir, void *upage, struct 
         }
     }
 
+    //printf("hash_delete loading");
     hash_delete(&spt->page_map, &e->hash_elem);
     return true;
 }
