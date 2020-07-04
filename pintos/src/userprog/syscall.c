@@ -515,6 +515,16 @@ struct mmap_info * get_mmap_info(int mapid) {
     return NULL;
 }
 
+void mmap_clear() {
+    // used in process_exit to clear all mmapping
+    #ifdef VM 
+    int r = thread_current()->mapid;
+    for (int i = 0; i < r; i++) {
+        remove_mapid(i);
+    }
+    #endif
+}
+
 static void remove_mapid(int mapping) {
 #ifdef VM
     struct thread *cur = thread_current();
@@ -595,6 +605,7 @@ mapid_t syscall_mmap (int fd, void *addr) {
     info->addr = original_addr;
     info->size = size;
     info->id = mapid;
+    cur->mapid = mapid + 1;
     list_push_back(&cur->mmap_list, &info->elem);
 
     lock_release(&filesystem_lock);

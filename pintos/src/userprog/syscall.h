@@ -26,5 +26,6 @@ int syscall_tell (int fd);
 mapid_t syscall_mmap (int fd, void *addr);
 void syscall_munmap (mapid_t mapping);
 struct lock * get_fs_lock();
-
+static void remove_mapid(int mapping);
+void mmap_clear();
 #endif /* userprog/syscall.h */

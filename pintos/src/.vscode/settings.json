@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "thread": "cpp",
-        "random": "c"
+        "random": "c",
+        "*.inc": "c",
+        "syscall.h": "c"
     }
 }

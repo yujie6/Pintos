@@ -232,6 +232,7 @@ process_exit(void) {
        to the kernel-only page directory. */
 
 #ifdef VM
+    mmap_clear();
     spt_destroy(cur->spt);
     cur->spt = NULL;
 #endif
