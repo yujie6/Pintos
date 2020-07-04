@@ -18,7 +18,6 @@ A semaphore is a nonnegative integer together with two operators that manipulate
 #### 4. Lock
 Compared to a semaphore, a lock has one added restriction: only the **thread that acquires a lock**, is allowed to release it. If this restriction is a problem, it’s a good sign that a semaphore should be used, instead of a lock.
 
-## Current Objectives
 
 
 ## Others
