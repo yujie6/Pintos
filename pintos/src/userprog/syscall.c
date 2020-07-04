@@ -273,6 +273,7 @@ int syscall_write(int fd, const void *buffer, unsigned size) {
 //       : "=&a" (result) : "m" (*uaddr));
 //   return result;
 // }
+#ifdef VM
 void load_and_pin(const void *buffer, size_t size);
 void load_and_pin(const void *buffer, size_t size) {
   struct s_page_table *spt = thread_current()->spt;
@@ -293,6 +294,7 @@ void un_pin(const void *buffer, size_t size) {
         unpin_page (spt, upage);
     }
 }
+#endif 
 
 int syscall_read (int fd, void *buffer, unsigned size) {
 
@@ -596,6 +598,9 @@ mapid_t syscall_mmap (int fd, void *addr) {
     list_push_back(&cur->mmap_list, &info->elem);
 
     lock_release(&filesystem_lock);
-#endif
+
     return mapid;
+#else
+    return 0;
+#endif
 }
